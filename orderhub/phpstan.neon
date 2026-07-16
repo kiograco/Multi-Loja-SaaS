@@ -1,0 +1,9 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - bin
+    excludePaths:
+        - src/Interface/Api/public/*
+    treatPhpDocTypesAsCertain: false
+    checkMissingIterableValueType: true

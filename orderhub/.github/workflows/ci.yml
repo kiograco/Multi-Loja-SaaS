@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: orderhub_test
+          POSTGRES_USER: orderhub
+          POSTGRES_PASSWORD: orderhub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orderhub"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DB_DSN: "pgsql:host=localhost;port=5432;dbname=orderhub_test"
+      DB_USER: orderhub
+      DB_PASSWORD: orderhub
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: ci-secret-key-must-be-at-least-32-bytes-long-0123456789
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_pgsql, redis, json
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run migrations
+        run: php bin/console migrate:up
+
+      - name: PHP CS Fixer (dry-run)
+        run: composer cs
+
+      - name: PHPStan (level 8)
+        run: composer stan
+
+      - name: PHPUnit
+        run: composer test

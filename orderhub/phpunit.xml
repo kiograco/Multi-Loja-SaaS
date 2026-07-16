@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src/Domain</directory>
+            <directory>src/Application</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="test"/>
+        <env name="DB_DSN" value="pgsql:host=postgres;port=5432;dbname=orderhub_test"/>
+        <env name="DB_USER" value="orderhub"/>
+        <env name="DB_PASSWORD" value="orderhub"/>
+        <env name="REDIS_HOST" value="redis"/>
+        <env name="REDIS_PORT" value="6379"/>
+        <env name="JWT_SECRET" value="test-secret-key-do-not-use-in-production-0123456789abcdef"/>
+    </php>
+</phpunit>

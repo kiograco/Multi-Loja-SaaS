@@ -1,0 +1,29 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use OrderHub\Infrastructure\Bootstrap\Container;
+use OrderHub\Interface\Cli\Command\MigrateUpCommand;
+use OrderHub\Interface\Cli\Command\OrderReplayCommand;
+use OrderHub\Interface\Cli\Command\ProjectionRebuildCommand;
+use OrderHub\Interface\Cli\Command\QueueRetryDlqCommand;
+use OrderHub\Interface\Cli\Command\QueueWorkCommand;
+use OrderHub\Interface\Cli\Command\SeedDemoCommand;
+use OrderHub\Interface\Cli\Command\TenantCreateCommand;
+use Symfony\Component\Console\Application;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$container = new Container();
+
+$app = new Application('OrderHub Console', '1.0.0');
+$app->add(new MigrateUpCommand($container));
+$app->add(new TenantCreateCommand($container));
+$app->add(new OrderReplayCommand($container));
+$app->add(new ProjectionRebuildCommand($container));
+$app->add(new QueueWorkCommand($container));
+$app->add(new QueueRetryDlqCommand($container));
+$app->add(new SeedDemoCommand($container));
+
+$app->run();
