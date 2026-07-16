@@ -33,6 +33,8 @@ use OrderHub\Application\Projector\ProjectionRebuilder;
 use OrderHub\Application\Projector\TopProductsProjector;
 use OrderHub\Application\Query\GetDashboardSummary\GetDashboardSummaryHandler;
 use OrderHub\Application\Query\GetDashboardSummary\GetDashboardSummaryQuery;
+use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineHandler;
+use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineQuery;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryHandler;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryQuery;
 use OrderHub\Application\Query\ListOrders\ListOrdersHandler;
@@ -75,6 +77,8 @@ use OrderHub\Infrastructure\Queue\Jobs\SendOrderConfirmationEmailJob;
 use OrderHub\Infrastructure\Queue\RedisJobQueue;
 use OrderHub\Infrastructure\Webhook\CurlWebhookClient;
 use Redis;
+use Twig\Environment;
+use Twig\Loader\FilesystemLoader;
 
 /**
  * Composition root. Builds and memoises the object graph, wires CQRS handlers,
@@ -287,6 +291,7 @@ final class Container
             $bus->register(ListOrdersQuery::class, new ListOrdersHandler($this->orderSummaryStore()));
             $bus->register(ListProductsQuery::class, new ListProductsHandler($this->productRepository()));
             $bus->register(GetDashboardSummaryQuery::class, new GetDashboardSummaryHandler($this->dailySalesStore(), $this->topProductsStore()));
+            $bus->register(GetOrderEventTimelineQuery::class, new GetOrderEventTimelineHandler($this->orderSummaryStore(), $this->eventStore()));
 
             return $bus;
         });
@@ -308,6 +313,20 @@ final class Container
     public function invoiceDirectory(): string
     {
         return \dirname(__DIR__, 3) . '/var/invoices';
+    }
+
+    public function twig(): Environment
+    {
+        /** @var Environment */
+        return $this->shared(Environment::class, function (): Environment {
+            $loader = new FilesystemLoader(\dirname(__DIR__, 3) . '/templates');
+            $isDev = (getenv('APP_ENV') ?: 'dev') !== 'prod';
+
+            return new Environment($loader, [
+                'cache' => $isDev ? false : \dirname(__DIR__, 3) . '/var/twig_cache',
+                'auto_reload' => true,
+            ]);
+        });
     }
 
     public function worker(): Worker

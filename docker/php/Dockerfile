@@ -26,4 +26,4 @@ RUN composer install --no-interaction --prefer-dist
 
 EXPOSE 8080
 
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "src/Interface/Api/public"]
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]

@@ -3,7 +3,8 @@ parameters:
     paths:
         - src
         - bin
+        - public
     excludePaths:
-        - src/Interface/Api/public/*
+        - public/assets/*
     treatPhpDocTypesAsCertain: false
     checkMissingIterableValueType: true

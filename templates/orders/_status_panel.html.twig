@@ -1,0 +1,33 @@
+<div id="order-status-panel">
+    <p>Status atual: <span class="badge badge-{{ order.status }}">{{ order.status }}</span></p>
+    {% if order.trackingCode %}<p>Código de rastreio: {{ order.trackingCode }}</p>{% endif %}
+
+    <div class="order-actions">
+        {% if order.status == 'criado' %}
+            <form method="post" action="/app/orders/{{ order.orderId }}/pay"
+                  hx-post="/app/orders/{{ order.orderId }}/pay"
+                  hx-target="#order-status-panel"
+                  hx-swap="outerHTML"
+                  hx-confirm="Confirmar pagamento deste pedido?">
+                <button type="submit">Marcar como pago</button>
+            </form>
+            <form method="post" action="/app/orders/{{ order.orderId }}/cancel"
+                  hx-post="/app/orders/{{ order.orderId }}/cancel"
+                  hx-target="#order-status-panel"
+                  hx-swap="outerHTML"
+                  hx-confirm="Cancelar este pedido? Essa ação não pode ser desfeita.">
+                <button type="submit">Cancelar pedido</button>
+            </form>
+        {% elseif order.status == 'pago' %}
+            <form method="post" action="/app/orders/{{ order.orderId }}/ship"
+                  hx-post="/app/orders/{{ order.orderId }}/ship"
+                  hx-target="#order-status-panel"
+                  hx-swap="outerHTML"
+                  hx-confirm="Confirmar envio deste pedido?">
+                <label for="trackingCode" class="sr-only">Código de rastreio</label>
+                <input type="text" id="trackingCode" name="trackingCode" placeholder="Código de rastreio" required>
+                <button type="submit">Marcar como enviado</button>
+            </form>
+        {% endif %}
+    </div>
+</div>

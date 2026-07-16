@@ -1,0 +1,11 @@
+<ol class="timeline">
+    {% for event in timeline %}
+        <li class="timeline-item">
+            <span class="timeline-time">{{ event.occurredAt }}</span>
+            <span class="timeline-type">{{ event.type }}</span>
+            <pre class="timeline-payload">{{ event.payload|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre>
+        </li>
+    {% else %}
+        <li>Nenhum evento registrado.</li>
+    {% endfor %}
+</ol>

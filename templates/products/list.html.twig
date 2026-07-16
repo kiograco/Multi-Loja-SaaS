@@ -1,0 +1,31 @@
+{% extends 'layout.html.twig' %}
+{% block title %}Produtos — OrderHub{% endblock %}
+{% block content %}
+    <div class="page-header">
+        <h1>Produtos</h1>
+        <a href="/app/products/new" class="button">Novo produto</a>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">Preço</th>
+            <th scope="col">Estoque</th>
+            <th scope="col"><span class="sr-only">Ações</span></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for product in products %}
+            <tr>
+                <td>{{ product.name }}</td>
+                <td>{{ product.currency }} {{ product.price }}</td>
+                <td>{{ product.stockQuantity }}</td>
+                <td><a href="/app/products/{{ product.id }}/edit">Editar<span class="sr-only"> {{ product.name }}</span></a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4">Nenhum produto cadastrado.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

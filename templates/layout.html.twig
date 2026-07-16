@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OrderHub{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/css/app.css">
+    <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+</head>
+<body>
+{% if isAuthenticated is defined and isAuthenticated %}
+    {% include 'partials/_nav.html.twig' %}
+{% endif %}
+<main class="container">
+    {% include 'partials/_flash_messages.html.twig' %}
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace OrderHub\Tests\Integration\Web;
+
+use OrderHub\Application\Query\ListProducts\ListProductsQuery;
+
+/**
+ * Fase 13's acceptance criterion: creating/editing a product through the Web
+ * form reflects correctly in the listing — verified here against the same
+ * ListProductsQuery the JSON API uses, proving it's the same read model.
+ */
+final class ProductWebTest extends WebTestCase
+{
+    public function testCreateProductThroughFormReflectsInListing(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+
+        $response = $this->request('POST', '/app/products/new', [
+            'name' => 'Mechanical Keyboard',
+            'price' => '450.00',
+            'stockQuantity' => '10',
+        ]);
+        self::assertSame(302, $response->status);
+        self::assertSame('/app/products', $response->headers['location']);
+
+        $products = $this->container->queryBus()->ask(new ListProductsQuery($tenantId));
+        self::assertCount(1, $products);
+        self::assertSame('Mechanical Keyboard', $products[0]['name']);
+        self::assertSame(45000, $products[0]['priceCents']);
+
+        $list = $this->request('GET', '/app/products');
+        self::assertStringContainsString('Mechanical Keyboard', $list->body);
+    }
+
+    public function testEditProductThroughFormUpdatesListing(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        $this->request('POST', '/app/products/new', ['name' => 'Old Name', 'price' => '10.00', 'stockQuantity' => '1']);
+
+        $productId = $this->container->queryBus()->ask(new ListProductsQuery($tenantId))[0]['id'];
+
+        $response = $this->request('POST', "/app/products/{$productId}/edit", [
+            'name' => 'New Name',
+            'price' => '20.00',
+            'stockQuantity' => '5',
+        ]);
+        self::assertSame(302, $response->status);
+
+        $products = $this->container->queryBus()->ask(new ListProductsQuery($tenantId));
+        self::assertSame('New Name', $products[0]['name']);
+        self::assertSame(2000, $products[0]['priceCents']);
+        self::assertSame(5, $products[0]['stockQuantity']);
+    }
+
+    public function testCreateWithBlankNameRendersFormWithError(): void
+    {
+        $this->loginAsNewOwner();
+
+        $response = $this->request('POST', '/app/products/new', ['name' => '', 'price' => '10.00', 'stockQuantity' => '1']);
+
+        self::assertSame(422, $response->status);
+        self::assertStringContainsString('blank', strtolower($response->body));
+    }
+}

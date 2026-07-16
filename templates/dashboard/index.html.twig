@@ -1,0 +1,56 @@
+{% extends 'layout.html.twig' %}
+{% block title %}Dashboard — OrderHub{% endblock %}
+{% block content %}
+    <h1>Dashboard</h1>
+
+    <section class="metrics">
+        <div class="metric-card">
+            <span class="metric-label">Pedidos pagos</span>
+            <span class="metric-value">{{ summary.totals.paidOrders }}</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Receita</span>
+            <span class="metric-value">R$ {{ summary.totals.revenue }}</span>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Ticket médio</span>
+            <span class="metric-value">R$ {{ summary.totals.averageTicket }}</span>
+        </div>
+    </section>
+
+    <h2>Vendas por dia</h2>
+    <table>
+        <thead>
+        <tr><th scope="col">Data</th><th scope="col">Pedidos</th><th scope="col">Receita</th></tr>
+        </thead>
+        <tbody>
+        {% for day in summary.salesByDay %}
+            <tr>
+                <td>{{ day.date }}</td>
+                <td>{{ day.ordersCount }}</td>
+                <td>R$ {{ day.revenue }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="3">Sem vendas registradas ainda.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Produtos mais vendidos</h2>
+    <table>
+        <thead>
+        <tr><th scope="col">Produto</th><th scope="col">Unidades</th><th scope="col">Receita</th></tr>
+        </thead>
+        <tbody>
+        {% for product in summary.topProducts %}
+            <tr>
+                <td>{{ product.productName }}</td>
+                <td>{{ product.unitsSold }}</td>
+                <td>R$ {{ product.revenue }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="3">Sem dados ainda.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

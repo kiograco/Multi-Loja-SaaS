@@ -118,6 +118,51 @@ docker exec orderhub_php php bin/console tenant:create --name="Loja X" --owner-e
 
 ---
 
+## Interface Web
+
+Além da API JSON, o OrderHub tem uma interface Web server-side rendered em
+`/app` — Twig + HTMX, sem build step e sem framework JS. Ela **reaproveita os
+mesmos Command/Query Handlers da API**; a única coisa que muda é a camada
+`Interface`, o que prova na prática que a arquitetura hexagonal suporta
+múltiplos canais sem duplicar regra de negócio (ver `src/Interface/Web`).
+
+Depois de `docker-compose up` e `seed:demo`, acesse:
+
+```text
+http://localhost:8080/app/login
+```
+
+com o e-mail/senha impressos pelo `seed:demo` (`demo@orderhub.test` /
+`password`). As telas disponíveis:
+
+- **`/app/dashboard`** — mesmas métricas do endpoint `GET /dashboard/summary`.
+- **`/app/products`** — listagem e formulário de criação/edição de produtos.
+- **`/app/orders`** — listagem filtrável por status.
+- **`/app/orders/{id}`** — detalhe do pedido com painel de ações (pagar/enviar/
+  cancelar, via HTMX) e a **timeline de eventos**: a sequência crua de eventos
+  do Event Store (`OrderCreated`, `PaymentReceived`, `OrderShipped`, ...), lida
+  diretamente por `GetOrderEventTimelineQuery` — a vitrine visual do Event
+  Sourcing já implementado nas Fases 0-9.
+
+**Sessão (Web) vs JWT (API).** São dois mecanismos de autenticação
+propositalmente diferentes. A API é stateless e fala com clientes programáticos,
+então usa um JWT no header `Authorization`. A interface Web fala com um
+navegador, então usa sessão PHP tradicional (`session_start()`, cookie
+`httpOnly`/`sameSite=Lax`, `secure` em produção) — não faz sentido (nem é mais
+seguro) guardar um token em `localStorage` para um canal que já tem cookies de
+sessão como mecanismo nativo e mais apropriado. Ver `Interface\Web\Http\Session`
+e `Interface\Web\Middleware\RequireWebAuthMiddleware`.
+
+**Por que Twig + HTMX em vez de uma SPA.** Escolha deliberada para manter o
+projeto 100% PHP, sem Node.js/Webpack/Vite e sem pipeline de build — o foco do
+exercício é competência em PHP server-side, não em frontend JS. HTMX (via CDN)
+dá a interatividade de trocar fragmentos de HTML (o painel de status de um
+pedido) sem recarregar a página inteira e sem escrever uma linha de JavaScript
+customizado; toda ação HTMX tem fallback de formulário tradicional (POST +
+redirect) para quando o JavaScript está desabilitado.
+
+---
+
 ## Como rodar os testes
 
 Os testes usam Postgres e Redis reais. A forma mais simples é executá-los dentro
@@ -255,21 +300,36 @@ e, esgotadas 3 tentativas, move para a dead-letter queue `orderhub:dlq`.
 7. **`composer.json` fixa `config.platform.php = 8.3.0`** para resolução de
    dependências reprodutível e compatível com o runtime alvo.
 
+8. **Front controller único.** O SPEC do frontend Web previa um `public/index.php`
+   próprio; para não duplicar o roteamento HTTP nem manter dois docroots, o
+   front controller em `public/index.php` despacha para `Api\Kernel` (prefixo
+   `/api/v1`) ou `Web\Kernel` (prefixo `/app`) conforme o path, reaproveitando o
+   mesmo `Container`. O antigo `src/Interface/Api/public/index.php` foi
+   removido; o docroot do PHP embutido passou a ser `public/`.
+
+9. **Campos de formulário em inglês (`email`/`password`).** O SPEC descreve o
+   login Web como "e-mail + senha" em prosa, mas os nomes de campo seguem a
+   convenção já usada em todo o resto do código (`customerName`, `priceCents`,
+   etc.) em vez de introduzir a única exceção em português.
+
 ---
 
 ## Estrutura de pastas
 
-```
+```text
 src/
   Domain/          # núcleo: Order (ES), Product, Tenant, User, eventos, VOs, ports
   Application/     # CommandBus/QueryBus, handlers, projectors, read models, fila, auth
   Infrastructure/  # Postgres, Redis, JWT, webhook, logging, container (composition root)
   Interface/
-    Api/           # Kernel, Router, Controllers, middleware
+    Api/           # Kernel, Router, Controllers, middleware (JSON, JWT)
+    Web/           # Kernel, Controllers, Middleware (HTML/Twig, sessão) — ver "Interface Web"
     Cli/           # comandos Symfony Console
+templates/         # Twig: layout, partials, telas de auth/dashboard/products/orders
+public/            # front controller único (index.php) + assets estáticos (CSS)
 tests/
   Unit/            # domínio + aplicação (sem I/O)
-  Integration/     # event store, projeções, API HTTP, dashboard
+  Integration/     # event store, projeções, API HTTP, Web HTTP, dashboard
   Support/         # test doubles (clocks, in-memory stores, stubs)
 docker/            # Dockerfile + docker-compose
 ```
@@ -284,3 +344,9 @@ docker/            # Dockerfile + docker-compose
 - [x] Suíte de testes verde (unit + integração, incluindo isolamento de tenant,
       fluxo HTTP completo, retry→DLQ e performance do dashboard com 1000 pedidos).
 - [x] `openapi.yaml` reflete todas as rotas implementadas.
+- [x] Fases 10–15 (frontend Web) implementadas: Twig + layout base, login/logout
+      via sessão protegendo `/app/*`, dashboard/produtos/pedidos Web reaproveitando
+      os mesmos Command/Query Handlers da API, ações de pedido via HTMX com
+      fallback sem JS, e timeline de eventos do pedido.
+- [x] Nenhum `Web\Controller` acessa `Domain`/`Infrastructure` diretamente — só
+      `Application` (Command/QueryBus), como o `Api\Controller`.
