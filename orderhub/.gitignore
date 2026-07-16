@@ -1,8 +1,0 @@
-/vendor/
-/.phpunit.cache/
-/.php-cs-fixer.cache
-/var/
-*.log
-.env
-.env.local
-composer.lock

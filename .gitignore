@@ -1,2 +1,9 @@
-/orderhub;C
-/SPEC-projeto-saas-pedidos.md
+/vendor/
+/orderhub/
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/var/
+*.log
+.env
+.env.local
+composer.lock
