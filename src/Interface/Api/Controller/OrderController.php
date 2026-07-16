@@ -8,8 +8,11 @@ use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CancelOrder\CancelOrderCommand;
 use OrderHub\Application\Command\CreateOrder\CreateOrderCommand;
+use OrderHub\Application\Command\DeliverOrder\DeliverOrderCommand;
 use OrderHub\Application\Command\PayOrder\PayOrderCommand;
 use OrderHub\Application\Command\ShipOrder\ShipOrderCommand;
+use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineQuery;
+use OrderHub\Application\Query\GetOrderInvoice\GetOrderInvoiceQuery;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryQuery;
 use OrderHub\Application\Query\ListOrders\ListOrdersQuery;
 use OrderHub\Application\ReadModel\OrderSummary;
@@ -70,6 +73,18 @@ final class OrderController
         return Response::json(['status' => 'enviado']);
     }
 
+    public function deliver(Request $request): Response
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+
+        $this->commandBus->dispatch(new DeliverOrderCommand(
+            $tenantId,
+            (string) $request->attribute('id'),
+        ));
+
+        return Response::json(['status' => 'entregue']);
+    }
+
     public function cancel(Request $request): Response
     {
         $tenantId = $this->currentUser($request)->tenantId();
@@ -106,5 +121,25 @@ final class OrderController
         ));
 
         return Response::json($result);
+    }
+
+    public function invoice(Request $request): Response
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+        $orderId = (string) $request->attribute('id');
+
+        $pdf = $this->queryBus->ask(new GetOrderInvoiceQuery($tenantId, $orderId));
+
+        return Response::pdf($pdf, 'invoice-' . $orderId . '.pdf');
+    }
+
+    public function timeline(Request $request): Response
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+        $orderId = (string) $request->attribute('id');
+
+        $timeline = $this->queryBus->ask(new GetOrderEventTimelineQuery($tenantId, $orderId));
+
+        return Response::json(['data' => $timeline]);
     }
 }

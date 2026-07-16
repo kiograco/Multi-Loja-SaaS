@@ -45,14 +45,14 @@ abstract class ApiTestCase extends IntegrationTestCase
 
     /**
      * @param array<string, mixed> $body
+     * @param array<string, string> $query additional query params (merged with $status when both are given)
      */
-    protected function request(string $method, string $path, array $body = [], ?string $token = null, ?string $status = null): Response
+    protected function request(string $method, string $path, array $body = [], ?string $token = null, ?string $status = null, array $query = []): Response
     {
         $headers = ['content-type' => 'application/json'];
         if ($token !== null) {
             $headers['authorization'] = 'Bearer ' . $token;
         }
-        $query = [];
         if ($status !== null) {
             $query['status'] = $status;
         }

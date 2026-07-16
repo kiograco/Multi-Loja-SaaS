@@ -6,26 +6,60 @@
         <a href="/app/products/new" class="button">Novo produto</a>
     </div>
 
-    <table>
-        <thead>
-        <tr>
-            <th scope="col">Nome</th>
-            <th scope="col">Preço</th>
-            <th scope="col">Estoque</th>
-            <th scope="col"><span class="sr-only">Ações</span></th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for product in products %}
+    <form method="get" action="/app/products" class="filter-form">
+        <label for="search">Buscar</label>
+        <input type="search" id="search" name="search" placeholder="Nome do produto" value="{{ search }}">
+
+        <label for="perPage">Por página</label>
+        <select id="perPage" name="perPage" onchange="this.form.submit()">
+            {% for value in [10, 20, 50, 100] %}
+                <option value="{{ value }}" {{ perPage == value ? 'selected' : '' }}>{{ value }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
             <tr>
-                <td>{{ product.name }}</td>
-                <td>{{ product.currency }} {{ product.price }}</td>
-                <td>{{ product.stockQuantity }}</td>
-                <td><a href="/app/products/{{ product.id }}/edit">Editar<span class="sr-only"> {{ product.name }}</span></a></td>
+                <th scope="col">Nome</th>
+                <th scope="col">Preço</th>
+                <th scope="col">Estoque</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
             </tr>
-        {% else %}
-            <tr><td colspan="4">Nenhum produto cadastrado.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for product in products %}
+                <tr>
+                    <td data-label="Nome">{{ product.name }}</td>
+                    <td data-label="Preço">{{ product.currency }} {{ product.price }}</td>
+                    <td data-label="Estoque">{{ product.stockQuantity }}</td>
+                    <td data-label="Ações"><a href="/app/products/{{ product.id }}/edit">Editar<span class="sr-only"> {{ product.name }}</span></a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4">Nenhum produto cadastrado.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% set query_suffix = (search ? '&search=' ~ search : '') ~ '&perPage=' ~ perPage %}
+    {% if meta is defined and meta.totalPages > 1 %}
+        <nav class="pagination" aria-label="Paginação de produtos">
+            {% if meta.page > 1 %}
+                <a href="/app/products?page={{ meta.page - 1 }}{{ query_suffix }}" class="pagination__link">&larr; Anterior</a>
+            {% else %}
+                <span class="pagination__link is-disabled" aria-disabled="true">&larr; Anterior</span>
+            {% endif %}
+
+            <span class="pagination__status">Página {{ meta.page }} de {{ meta.totalPages }}</span>
+
+            {% if meta.page < meta.totalPages %}
+                <a href="/app/products?page={{ meta.page + 1 }}{{ query_suffix }}" class="pagination__link">Próxima &rarr;</a>
+            {% else %}
+                <span class="pagination__link is-disabled" aria-disabled="true">Próxima &rarr;</span>
+            {% endif %}
+        </nav>
+    {% endif %}
 {% endblock %}

@@ -34,4 +34,15 @@ final class InMemoryProductRepository implements ProductRepository
 
         return $result;
     }
+
+    public function searchForTenant(string $tenantId, ?string $search, int $perPage, int $offset): array
+    {
+        $matches = array_values(array_filter(
+            $this->findAllForTenant($tenantId),
+            static fn (Product $p): bool => $search === null || $search === '' || stripos($p->name(), $search) !== false,
+        ));
+        usort($matches, static fn (Product $a, Product $b): int => strcmp($a->name(), $b->name()));
+
+        return ['items' => array_slice($matches, $offset, $perPage), 'total' => count($matches)];
+    }
 }

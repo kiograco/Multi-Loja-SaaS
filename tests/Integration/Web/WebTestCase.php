@@ -82,7 +82,8 @@ abstract class WebTestCase extends IntegrationTestCase
     private function resetSession(): void
     {
         if (session_status() === \PHP_SESSION_ACTIVE) {
-            session_write_close();
+            $_SESSION = [];
+            session_destroy();
         }
         $_SESSION = [];
     }

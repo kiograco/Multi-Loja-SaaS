@@ -44,6 +44,14 @@ final class Response
         return new self(204, '', []);
     }
 
+    public static function pdf(string $bytes, string $filename): self
+    {
+        return new self(200, $bytes, [
+            'content-type' => 'application/pdf',
+            'content-disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
     public function send(): void
     {
         http_response_code($this->status);

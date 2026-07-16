@@ -138,11 +138,21 @@ com o e-mail/senha impressos pelo `seed:demo` (`demo@orderhub.test` /
 - **`/app/dashboard`** — mesmas métricas do endpoint `GET /dashboard/summary`.
 - **`/app/products`** — listagem e formulário de criação/edição de produtos.
 - **`/app/orders`** — listagem filtrável por status.
-- **`/app/orders/{id}`** — detalhe do pedido com painel de ações (pagar/enviar/
-  cancelar, via HTMX) e a **timeline de eventos**: a sequência crua de eventos
-  do Event Store (`OrderCreated`, `PaymentReceived`, `OrderShipped`, ...), lida
-  diretamente por `GetOrderEventTimelineQuery` — a vitrine visual do Event
-  Sourcing já implementado nas Fases 0-9.
+- **`/app/orders/{id}`** — detalhe do pedido com painel de ações via HTMX
+  (pagar → enviar → **entregar**, fechando o ciclo de vida completo; cancelar
+  fica disponível tanto em `criado` quanto em `pago`, com confirmação
+  reforçada nesse segundo caso) e a **timeline de eventos**: a sequência crua
+  de eventos do Event Store (`OrderCreated`, `PaymentReceived`, `OrderShipped`,
+  `OrderDelivered`, ...), lida diretamente por `GetOrderEventTimelineQuery` — a
+  vitrine visual do Event Sourcing já implementado nas Fases 0-9. Uma vez pago,
+  o pedido também ganha um link para baixar a nota fiscal (PDF gerado
+  assincronamente).
+- **`/app/settings`** — nome da loja e URL de webhook (`Tenant::rename()`/
+  `configureWebhook()`), histórico das últimas tentativas de entrega do
+  webhook (sucesso/falha, código HTTP, erro) e um botão "Testar webhook agora".
+- **Trocar de loja** — um dono com mais de uma loja vê um seletor no menu
+  lateral (`POST /app/switch-tenant/{tenantId}`) que troca a loja ativa da
+  sessão sem exigir novo login.
 
 **Sessão (Web) vs JWT (API).** São dois mecanismos de autenticação
 propositalmente diferentes. A API é stateless e fala com clientes programáticos,
@@ -211,10 +221,28 @@ curl -s -X POST $BASE/orders/$ORDER/pay -H "Authorization: Bearer $TOKEN" \
 curl -s -X POST $BASE/orders/$ORDER/ship -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"trackingCode":"BR123"}'
 
-# 6) Detalhe (read model) e dashboard
+# 6) Entregar — fecha o ciclo de vida do pedido
+curl -s -X POST $BASE/orders/$ORDER/deliver -H "Authorization: Bearer $TOKEN"
+
+# 7) Timeline bruta do event store (mesma query usada pela Web)
+curl -s $BASE/orders/$ORDER/timeline -H "Authorization: Bearer $TOKEN" | jq
+
+# 8) Nota fiscal (PDF gerado de forma assíncrona ao pagamento)
+curl -s $BASE/orders/$ORDER/invoice -H "Authorization: Bearer $TOKEN" -o invoice.pdf
+
+# 9) Detalhe (read model) e dashboard
 curl -s $BASE/orders/$ORDER -H "Authorization: Bearer $TOKEN" | jq
-curl -s $BASE/dashboard/summary -H "Authorization: Bearer $TOKEN" | jq
+curl -s "$BASE/dashboard/summary?topProductsLimit=10" -H "Authorization: Bearer $TOKEN" | jq
+
+# 10) Configurações da loja (nome/webhook) e histórico de entregas
+curl -s -X PATCH $BASE/tenants/me -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"store_name":"Minha Loja","webhook_url":"https://example.com/hooks"}'
+curl -s -X POST $BASE/webhooks/test -H "Authorization: Bearer $TOKEN"
+curl -s $BASE/webhooks/deliveries -H "Authorization: Bearer $TOKEN" | jq
 ```
+
+Um pedido pago (mas ainda não enviado) também pode ser cancelado — `cancel`
+aceita `criado` e `pago`, só fica indisponível a partir de `enviado`.
 
 Toda resposta de erro segue `{"error":{"code":"...","message":"..."}}`. Rotas
 com escopo de tenant têm rate limit de 100 req/min por tenant (Redis).

@@ -17,7 +17,7 @@ final class CurlWebhookClient implements WebhookClient
     {
     }
 
-    public function post(string $url, array $payload): void
+    public function post(string $url, array $payload): int
     {
         $body = json_encode($payload, \JSON_THROW_ON_ERROR);
         $handle = curl_init($url);
@@ -42,7 +42,9 @@ final class CurlWebhookClient implements WebhookClient
             throw WebhookDeliveryException::forUrl($url, $error !== '' ? $error : 'transport error');
         }
         if ($status < 200 || $status >= 300) {
-            throw WebhookDeliveryException::forUrl($url, 'unexpected HTTP status ' . $status);
+            throw WebhookDeliveryException::forUrl($url, 'unexpected HTTP status ' . $status, $status);
         }
+
+        return $status;
     }
 }

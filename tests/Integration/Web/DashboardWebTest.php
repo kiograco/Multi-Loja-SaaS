@@ -37,4 +37,29 @@ final class DashboardWebTest extends WebTestCase
         self::assertStringContainsString((string) $expected['totals']['paidOrders'], $response->body);
         self::assertStringContainsString($expected['totals']['revenue'], $response->body);
     }
+
+    public function testTopProductsLimitIsAdjustableViaQueryString(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        for ($i = 1; $i <= 7; ++$i) {
+            $productId = $this->container->commandBus()->dispatch(new CreateProductCommand($tenantId, "Product {$i}", 1000, 10));
+            $orderId = $this->container->commandBus()->dispatch(new CreateOrderCommand(
+                $tenantId,
+                'Alan Turing',
+                'alan@example.com',
+                [['productId' => (string) $productId, 'quantity' => 1]],
+            ));
+            $this->container->commandBus()->dispatch(new PayOrderCommand($tenantId, (string) $orderId, 'pix'));
+        }
+
+        $default = $this->container->queryBus()->ask(new GetDashboardSummaryQuery($tenantId));
+        self::assertCount(5, $default['topProducts']);
+
+        $response = $this->request('GET', '/app/dashboard', [], ['topProductsLimit' => '7']);
+        $expanded = $this->container->queryBus()->ask(new GetDashboardSummaryQuery($tenantId, 7));
+
+        self::assertSame(200, $response->status);
+        self::assertCount(7, $expanded['topProducts']);
+        self::assertStringContainsString('Product 7', $response->body);
+    }
 }

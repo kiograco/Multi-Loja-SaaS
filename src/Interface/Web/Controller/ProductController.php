@@ -8,7 +8,9 @@ use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CreateProduct\CreateProductCommand;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductCommand;
-use OrderHub\Application\Query\ListProducts\ListProductsQuery;
+use OrderHub\Application\Query\GetProduct\GetProductQuery;
+use OrderHub\Application\Query\SearchProducts\SearchProductsQuery;
+use OrderHub\Domain\Shared\Exceptions\AggregateNotFoundException;
 use OrderHub\Domain\Shared\Exceptions\DomainException;
 use OrderHub\Interface\Web\Http\Session;
 use OrderHub\Interface\Web\Http\WebRequest;
@@ -36,10 +38,22 @@ final class ProductController
     public function list(WebRequest $request): WebResponse
     {
         $tenantId = $this->currentUser($request)->tenantId();
+        $search = $request->query('search');
+        $perPage = (int) ($request->query('perPage') ?? '20');
 
-        $products = $this->queryBus->ask(new ListProductsQuery($tenantId));
+        $result = $this->queryBus->ask(new SearchProductsQuery(
+            $tenantId,
+            $search !== '' ? $search : null,
+            (int) ($request->query('page') ?? '1'),
+            $perPage,
+        ));
 
-        return $this->render($this->twig, $this->session, 'products/list.html.twig', ['products' => $products]);
+        return $this->render($this->twig, $this->session, 'products/list.html.twig', [
+            'products' => $result['data'],
+            'meta' => $result['meta'],
+            'search' => $search,
+            'perPage' => $perPage,
+        ]);
     }
 
     public function newForm(WebRequest $request): WebResponse
@@ -114,14 +128,11 @@ final class ProductController
      */
     private function findProduct(string $tenantId, string $id): ?array
     {
-        $products = $this->queryBus->ask(new ListProductsQuery($tenantId));
-        foreach ($products as $product) {
-            if ($product['id'] === $id) {
-                return $product;
-            }
+        try {
+            return $this->queryBus->ask(new GetProductQuery($tenantId, $id));
+        } catch (AggregateNotFoundException) {
+            return null;
         }
-
-        return null;
     }
 
     private function parsePriceToCents(string $decimal): int

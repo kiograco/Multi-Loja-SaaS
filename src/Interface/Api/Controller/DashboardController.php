@@ -20,7 +20,8 @@ final class DashboardController
     public function summary(Request $request): Response
     {
         $tenantId = $this->currentUser($request)->tenantId();
+        $topProductsLimit = (int) ($request->query('topProductsLimit') ?? '5');
 
-        return Response::json($this->queryBus->ask(new GetDashboardSummaryQuery($tenantId)));
+        return Response::json($this->queryBus->ask(new GetDashboardSummaryQuery($tenantId, $topProductsLimit)));
     }
 }

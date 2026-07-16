@@ -13,7 +13,9 @@ interface WebhookClient
     /**
      * @param array<string, mixed> $payload
      *
+     * @return int the HTTP response status code
+     *
      * @throws \OrderHub\Application\Webhook\WebhookDeliveryException
      */
-    public function post(string $url, array $payload): void;
+    public function post(string $url, array $payload): int;
 }

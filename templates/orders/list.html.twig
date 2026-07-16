@@ -11,29 +11,57 @@
                 <option value="{{ value }}" {{ status == value ? 'selected' : '' }}>{{ value }}</option>
             {% endfor %}
         </select>
+
+        <label for="perPage">Por página</label>
+        <select id="perPage" name="perPage" onchange="this.form.submit()">
+            {% for value in [10, 20, 50, 100] %}
+                <option value="{{ value }}" {{ perPage == value ? 'selected' : '' }}>{{ value }}</option>
+            {% endfor %}
+        </select>
         <noscript><button type="submit">Filtrar</button></noscript>
     </form>
 
-    <table>
-        <thead>
-        <tr>
-            <th scope="col">Cliente</th>
-            <th scope="col">Total</th>
-            <th scope="col">Status</th>
-            <th scope="col"><span class="sr-only">Ações</span></th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for order in orders %}
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
             <tr>
-                <td>{{ order.customerName }}</td>
-                <td>{{ order.currency }} {{ order.total }}</td>
-                <td><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
-                <td><a href="/app/orders/{{ order.orderId }}">Ver<span class="sr-only"> pedido de {{ order.customerName }}</span></a></td>
+                <th scope="col">Cliente</th>
+                <th scope="col">Total</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
             </tr>
-        {% else %}
-            <tr><td colspan="4">Nenhum pedido encontrado.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td data-label="Cliente">{{ order.customerName }}</td>
+                    <td data-label="Total">{{ order.currency }} {{ order.total }}</td>
+                    <td data-label="Status"><span class="badge badge-{{ order.status }}">{{ order.status }}</span></td>
+                    <td data-label="Ações"><a href="/app/orders/{{ order.orderId }}">Ver<span class="sr-only"> pedido de {{ order.customerName }}</span></a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4">Nenhum pedido encontrado.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% set query_suffix = (status ? '&status=' ~ status : '') ~ '&perPage=' ~ perPage %}
+    {% if meta is defined and meta.totalPages > 1 %}
+        <nav class="pagination" aria-label="Paginação de pedidos">
+            {% if meta.page > 1 %}
+                <a href="/app/orders?page={{ meta.page - 1 }}{{ query_suffix }}" class="pagination__link">&larr; Anterior</a>
+            {% else %}
+                <span class="pagination__link is-disabled" aria-disabled="true">&larr; Anterior</span>
+            {% endif %}
+
+            <span class="pagination__status">Página {{ meta.page }} de {{ meta.totalPages }}</span>
+
+            {% if meta.page < meta.totalPages %}
+                <a href="/app/orders?page={{ meta.page + 1 }}{{ query_suffix }}" class="pagination__link">Próxima &rarr;</a>
+            {% else %}
+                <span class="pagination__link is-disabled" aria-disabled="true">Próxima &rarr;</span>
+            {% endif %}
+        </nav>
+    {% endif %}
 {% endblock %}

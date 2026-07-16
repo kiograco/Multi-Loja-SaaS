@@ -19,4 +19,9 @@ interface ProductRepository
      * @return list<Product>
      */
     public function findAllForTenant(string $tenantId): array;
+
+    /**
+     * @return array{items: list<Product>, total: int}
+     */
+    public function searchForTenant(string $tenantId, ?string $search, int $perPage, int $offset): array;
 }

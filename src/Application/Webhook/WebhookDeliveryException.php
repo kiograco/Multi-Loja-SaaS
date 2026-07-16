@@ -8,8 +8,13 @@ use RuntimeException;
 
 final class WebhookDeliveryException extends RuntimeException
 {
-    public static function forUrl(string $url, string $reason): self
+    private function __construct(string $message, public readonly ?int $responseCode = null)
     {
-        return new self(\sprintf('Webhook delivery to %s failed: %s', $url, $reason));
+        parent::__construct($message);
+    }
+
+    public static function forUrl(string $url, string $reason, ?int $responseCode = null): self
+    {
+        return new self(\sprintf('Webhook delivery to %s failed: %s', $url, $reason), $responseCode);
     }
 }

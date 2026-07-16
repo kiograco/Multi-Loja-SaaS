@@ -1,9 +1,39 @@
-<ol class="timeline">
+{% set event_kinds = {
+    'OrderCreated': 'created',
+    'PaymentReceived': 'payment',
+    'OrderShipped': 'shipped',
+    'OrderDelivered': 'delivered',
+    'OrderCancelled': 'cancelled',
+} %}
+<ol class="event-timeline">
     {% for event in timeline %}
-        <li class="timeline-item">
-            <span class="timeline-time">{{ event.occurredAt }}</span>
-            <span class="timeline-type">{{ event.type }}</span>
-            <pre class="timeline-payload">{{ event.payload|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre>
+        <li class="event-entry" data-kind="{{ event_kinds[event.type]|default('created') }}" style="animation-delay: {{ loop.index0 * 60 }}ms">
+            <span class="event-stamp"></span>
+            <div class="event-body">
+                <span class="event-type">{{ event.type }}</span>
+                <span class="event-time">{{ event.occurredAt|date('Y-m-d H:i:s') }}</span>
+                <p class="event-detail">
+                    {% if event.type == 'OrderCreated' %}
+                        {% set itemCount = 0 %}
+                        {% for orderItem in event.payload.items %}{% set itemCount = itemCount + orderItem.quantity %}{% endfor %}
+                        Pedido criado — {{ itemCount }} {{ itemCount == 1 ? 'item' : 'itens' }}, {{ event.payload.currency }} {{ (event.payload.totalAmountCents / 100)|number_format(2, ',', '.') }}
+                    {% elseif event.type == 'PaymentReceived' %}
+                        Pagamento via {{ event.payload.paymentMethod }} confirmado — {{ event.payload.currency }} {{ (event.payload.amountPaidCents / 100)|number_format(2, ',', '.') }}
+                    {% elseif event.type == 'OrderShipped' %}
+                        Pedido enviado — código de rastreio {{ event.payload.trackingCode }}
+                    {% elseif event.type == 'OrderDelivered' %}
+                        Pedido entregue ao cliente
+                    {% elseif event.type == 'OrderCancelled' %}
+                        Pedido cancelado — motivo: {{ event.payload.reason }}
+                    {% else %}
+                        {{ event.type }}
+                    {% endif %}
+                </p>
+                <details class="event-payload">
+                    <summary>Payload bruto</summary>
+                    <pre>{{ event.payload|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre>
+                </details>
+            </div>
         </li>
     {% else %}
         <li>Nenhum evento registrado.</li>

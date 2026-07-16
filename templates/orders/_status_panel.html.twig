@@ -11,13 +11,6 @@
                   hx-confirm="Confirmar pagamento deste pedido?">
                 <button type="submit">Marcar como pago</button>
             </form>
-            <form method="post" action="/app/orders/{{ order.orderId }}/cancel"
-                  hx-post="/app/orders/{{ order.orderId }}/cancel"
-                  hx-target="#order-status-panel"
-                  hx-swap="outerHTML"
-                  hx-confirm="Cancelar este pedido? Essa ação não pode ser desfeita.">
-                <button type="submit">Cancelar pedido</button>
-            </form>
         {% elseif order.status == 'pago' %}
             <form method="post" action="/app/orders/{{ order.orderId }}/ship"
                   hx-post="/app/orders/{{ order.orderId }}/ship"
@@ -28,6 +21,28 @@
                 <input type="text" id="trackingCode" name="trackingCode" placeholder="Código de rastreio" required>
                 <button type="submit">Marcar como enviado</button>
             </form>
+        {% elseif order.status == 'enviado' %}
+            <form method="post" action="/app/orders/{{ order.orderId }}/deliver"
+                  hx-post="/app/orders/{{ order.orderId }}/deliver"
+                  hx-target="#order-status-panel"
+                  hx-swap="outerHTML"
+                  hx-confirm="Confirmar entrega deste pedido?">
+                <button type="submit">Marcar como entregue</button>
+            </form>
+        {% endif %}
+
+        {% if order.status in ['criado', 'pago'] %}
+            <form method="post" action="/app/orders/{{ order.orderId }}/cancel"
+                  hx-post="/app/orders/{{ order.orderId }}/cancel"
+                  hx-target="#order-status-panel"
+                  hx-swap="outerHTML"
+                  hx-confirm="{{ order.status == 'pago' ? 'Cancelar este pedido pago vai exigir estorno manual ao cliente. Confirmar cancelamento?' : 'Confirmar cancelamento deste pedido?' }}">
+                <button type="submit" class="button--danger">Cancelar pedido</button>
+            </form>
+        {% endif %}
+
+        {% if order.status in ['pago', 'enviado', 'entregue'] %}
+            <a href="/app/orders/{{ order.orderId }}/invoice" class="button button--secondary">Baixar nota fiscal</a>
         {% endif %}
     </div>
 </div>

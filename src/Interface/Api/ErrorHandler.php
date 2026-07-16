@@ -7,6 +7,7 @@ namespace OrderHub\Interface\Api;
 use OrderHub\Application\Exceptions\AuthenticationException;
 use OrderHub\Application\Exceptions\AuthorizationException;
 use OrderHub\Application\Exceptions\ConflictException;
+use OrderHub\Application\Exceptions\InvoiceNotReadyException;
 use OrderHub\Domain\Order\Exceptions\InvalidOrderException;
 use OrderHub\Domain\Product\Exceptions\InvalidProductException;
 use OrderHub\Domain\Shared\Exceptions\AggregateNotFoundException;
@@ -51,6 +52,7 @@ final class ErrorHandler
             $e instanceof AuthenticationException => [401, 'UNAUTHENTICATED'],
             $e instanceof AuthorizationException => [403, 'FORBIDDEN'],
             $e instanceof ConflictException => [409, 'CONFLICT'],
+            $e instanceof InvoiceNotReadyException => [404, 'INVOICE_NOT_READY'],
             $e instanceof AggregateNotFoundException => [404, 'NOT_FOUND'],
             $e instanceof ConcurrencyException => [409, 'CONCURRENCY_CONFLICT'],
             $e instanceof InvalidUuidException,

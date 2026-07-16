@@ -24,6 +24,8 @@ trait RendersTemplates
             ...$data,
             'flashes' => $session->pullFlashes(),
             'isAuthenticated' => $session->has('user_id'),
+            'stores' => $session->get('stores', []),
+            'activeTenantId' => $session->get('tenant_id'),
         ]), $status);
     }
 }

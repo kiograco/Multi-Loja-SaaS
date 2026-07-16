@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OrderHub\Interface\Web;
 
 use OrderHub\Application\Exceptions\AuthorizationException;
+use OrderHub\Application\Exceptions\InvoiceNotReadyException;
 use OrderHub\Domain\Shared\Exceptions\AggregateNotFoundException;
 use OrderHub\Domain\Shared\Exceptions\ConcurrencyException;
 use OrderHub\Domain\Shared\Exceptions\DomainException;
@@ -46,6 +47,7 @@ final class ErrorHandler
     private function classify(Throwable $e): array
     {
         return match (true) {
+            $e instanceof InvoiceNotReadyException => [404, 'Nota fiscal ainda não disponível'],
             $e instanceof AggregateNotFoundException => [404, 'Não encontrado'],
             $e instanceof AuthorizationException => [403, 'Acesso negado'],
             $e instanceof ConcurrencyException => [409, 'Conflito de concorrência'],

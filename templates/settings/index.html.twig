@@ -1,0 +1,62 @@
+{% extends 'layout.html.twig' %}
+{% block title %}Configurações — OrderHub{% endblock %}
+{% block content %}
+    <h1>Configurações da loja</h1>
+
+    {% if errors|length > 0 %}
+        <div class="flash flash-error" role="alert">
+            <ul>
+                {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post" action="/app/settings" class="form">
+        <label for="storeName">Nome da loja</label>
+        <input type="text" id="storeName" name="storeName" value="{{ settings.storeName }}" required>
+
+        <label for="webhookUrl">URL de webhook</label>
+        <input type="url" id="webhookUrl" name="webhookUrl" placeholder="https://exemplo.com/hooks/pedidos" value="{{ settings.webhookUrl }}">
+        <p class="form-hint">Notificado a cada pagamento de pedido. Deixe em branco para desativar.</p>
+
+        <button type="submit">Salvar</button>
+    </form>
+
+    {% if settings.webhookUrl %}
+        <form method="post" action="/app/settings/test-webhook" style="margin-top: var(--space-3)">
+            <button type="submit" class="button--secondary">Testar webhook agora</button>
+        </form>
+    {% endif %}
+
+    <h2>Histórico de entregas do webhook</h2>
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th scope="col">Quando</th>
+                <th scope="col">Pedido</th>
+                <th scope="col">Status</th>
+                <th scope="col">Código</th>
+                <th scope="col">Detalhe</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for delivery in deliveries %}
+                <tr>
+                    <td data-label="Quando">{{ delivery.attemptedAt|date('Y-m-d H:i:s') }}</td>
+                    <td data-label="Pedido">{{ delivery.orderId ? delivery.orderId : 'Teste manual' }}</td>
+                    <td data-label="Status">
+                        <span class="badge {{ delivery.success ? 'badge-sucesso' : 'badge-falha' }}">
+                            {{ delivery.success ? 'sucesso' : 'falha' }}
+                        </span>
+                    </td>
+                    <td data-label="Código">{{ delivery.responseCode ? delivery.responseCode : '—' }}</td>
+                    <td data-label="Detalhe">{{ delivery.error ? delivery.error : '—' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">Nenhuma tentativa de entrega registrada ainda.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

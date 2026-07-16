@@ -4,16 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OrderHub{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/app.css">
     <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+    <script src="/assets/js/app.js" defer></script>
 </head>
 <body>
-{% if isAuthenticated is defined and isAuthenticated %}
-    {% include 'partials/_nav.html.twig' %}
-{% endif %}
-<main class="container">
-    {% include 'partials/_flash_messages.html.twig' %}
-    {% block content %}{% endblock %}
-</main>
+<div class="app-shell">
+    {% if isAuthenticated is defined and isAuthenticated %}
+        {% include 'partials/_nav.html.twig' %}
+    {% endif %}
+    <div class="app-content">
+        <main class="container">
+            {% include 'partials/_flash_messages.html.twig' %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
 </body>
 </html>

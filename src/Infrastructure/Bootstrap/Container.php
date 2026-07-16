@@ -16,14 +16,20 @@ use OrderHub\Application\Command\CreateProduct\CreateProductCommand;
 use OrderHub\Application\Command\CreateProduct\CreateProductHandler;
 use OrderHub\Application\Command\CreateTenant\CreateTenantCommand;
 use OrderHub\Application\Command\CreateTenant\CreateTenantHandler;
+use OrderHub\Application\Command\DeliverOrder\DeliverOrderCommand;
+use OrderHub\Application\Command\DeliverOrder\DeliverOrderHandler;
 use OrderHub\Application\Command\PayOrder\PayOrderCommand;
 use OrderHub\Application\Command\PayOrder\PayOrderHandler;
 use OrderHub\Application\Command\RegisterUser\RegisterUserCommand;
 use OrderHub\Application\Command\RegisterUser\RegisterUserHandler;
 use OrderHub\Application\Command\ShipOrder\ShipOrderCommand;
 use OrderHub\Application\Command\ShipOrder\ShipOrderHandler;
+use OrderHub\Application\Command\TestWebhook\TestWebhookCommand;
+use OrderHub\Application\Command\TestWebhook\TestWebhookHandler;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductCommand;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductHandler;
+use OrderHub\Application\Command\UpdateTenantSettings\UpdateTenantSettingsCommand;
+use OrderHub\Application\Command\UpdateTenantSettings\UpdateTenantSettingsHandler;
 use OrderHub\Application\EventBus\EventBus;
 use OrderHub\Application\EventBus\OrderSideEffectsSubscriber;
 use OrderHub\Application\Order\OrderRepository;
@@ -35,12 +41,24 @@ use OrderHub\Application\Query\GetDashboardSummary\GetDashboardSummaryHandler;
 use OrderHub\Application\Query\GetDashboardSummary\GetDashboardSummaryQuery;
 use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineHandler;
 use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineQuery;
+use OrderHub\Application\Query\GetOrderInvoice\GetOrderInvoiceHandler;
+use OrderHub\Application\Query\GetOrderInvoice\GetOrderInvoiceQuery;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryHandler;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryQuery;
+use OrderHub\Application\Query\GetProduct\GetProductHandler;
+use OrderHub\Application\Query\GetProduct\GetProductQuery;
+use OrderHub\Application\Query\GetTenantSettings\GetTenantSettingsHandler;
+use OrderHub\Application\Query\GetTenantSettings\GetTenantSettingsQuery;
+use OrderHub\Application\Query\ListMyTenants\ListMyTenantsHandler;
+use OrderHub\Application\Query\ListMyTenants\ListMyTenantsQuery;
 use OrderHub\Application\Query\ListOrders\ListOrdersHandler;
 use OrderHub\Application\Query\ListOrders\ListOrdersQuery;
 use OrderHub\Application\Query\ListProducts\ListProductsHandler;
 use OrderHub\Application\Query\ListProducts\ListProductsQuery;
+use OrderHub\Application\Query\ListWebhookDeliveries\ListWebhookDeliveriesHandler;
+use OrderHub\Application\Query\ListWebhookDeliveries\ListWebhookDeliveriesQuery;
+use OrderHub\Application\Query\SearchProducts\SearchProductsHandler;
+use OrderHub\Application\Query\SearchProducts\SearchProductsQuery;
 use OrderHub\Application\Queue\JobQueue;
 use OrderHub\Application\Queue\ProcessedJobLedger;
 use OrderHub\Application\Queue\Worker;
@@ -49,6 +67,7 @@ use OrderHub\Application\ReadModel\OrderSummaryReadStore;
 use OrderHub\Application\ReadModel\TopProductsReadStore;
 use OrderHub\Application\Support\Logger;
 use OrderHub\Application\Webhook\WebhookClient;
+use OrderHub\Application\Webhook\WebhookDeliveryRepository;
 use OrderHub\Domain\Order\Events\OrderEventFactory;
 use OrderHub\Domain\Product\ProductRepository;
 use OrderHub\Domain\Shared\Clock;
@@ -67,6 +86,7 @@ use OrderHub\Infrastructure\Persistence\PostgresProcessedJobLedger;
 use OrderHub\Infrastructure\Persistence\PostgresProductRepository;
 use OrderHub\Infrastructure\Persistence\PostgresTenantRepository;
 use OrderHub\Infrastructure\Persistence\PostgresUserRepository;
+use OrderHub\Infrastructure\Persistence\PostgresWebhookDeliveryRepository;
 use OrderHub\Infrastructure\Persistence\ReadModel\PostgresDailySalesStore;
 use OrderHub\Infrastructure\Persistence\ReadModel\PostgresOrderSummaryStore;
 use OrderHub\Infrastructure\Persistence\ReadModel\PostgresTopProductsStore;
@@ -176,6 +196,12 @@ final class Container
         return $this->shared(TenantRepository::class, fn (): TenantRepository => new PostgresTenantRepository($this->database()));
     }
 
+    public function webhookDeliveryRepository(): WebhookDeliveryRepository
+    {
+        /** @var WebhookDeliveryRepository */
+        return $this->shared(WebhookDeliveryRepository::class, fn (): WebhookDeliveryRepository => new PostgresWebhookDeliveryRepository($this->database()));
+    }
+
     public function userRepository(): UserRepository
     {
         /** @var UserRepository */
@@ -276,7 +302,10 @@ final class Container
             $bus->register(CreateOrderCommand::class, new CreateOrderHandler($this->orderRepository(), $this->productRepository(), $this->clock()));
             $bus->register(PayOrderCommand::class, new PayOrderHandler($this->orderRepository(), $this->clock()));
             $bus->register(ShipOrderCommand::class, new ShipOrderHandler($this->orderRepository(), $this->clock()));
+            $bus->register(DeliverOrderCommand::class, new DeliverOrderHandler($this->orderRepository(), $this->clock()));
             $bus->register(CancelOrderCommand::class, new CancelOrderHandler($this->orderRepository(), $this->clock()));
+            $bus->register(UpdateTenantSettingsCommand::class, new UpdateTenantSettingsHandler($this->tenantRepository()));
+            $bus->register(TestWebhookCommand::class, new TestWebhookHandler($this->tenantRepository(), $this->webhookClient(), $this->webhookDeliveryRepository()));
 
             return $bus;
         });
@@ -292,6 +321,12 @@ final class Container
             $bus->register(ListProductsQuery::class, new ListProductsHandler($this->productRepository()));
             $bus->register(GetDashboardSummaryQuery::class, new GetDashboardSummaryHandler($this->dailySalesStore(), $this->topProductsStore()));
             $bus->register(GetOrderEventTimelineQuery::class, new GetOrderEventTimelineHandler($this->orderSummaryStore(), $this->eventStore()));
+            $bus->register(GetOrderInvoiceQuery::class, new GetOrderInvoiceHandler($this->orderSummaryStore(), $this->invoiceDirectory()));
+            $bus->register(GetTenantSettingsQuery::class, new GetTenantSettingsHandler($this->tenantRepository()));
+            $bus->register(ListMyTenantsQuery::class, new ListMyTenantsHandler($this->tenantRepository()));
+            $bus->register(ListWebhookDeliveriesQuery::class, new ListWebhookDeliveriesHandler($this->webhookDeliveryRepository()));
+            $bus->register(GetProductQuery::class, new GetProductHandler($this->productRepository()));
+            $bus->register(SearchProductsQuery::class, new SearchProductsHandler($this->productRepository()));
 
             return $bus;
         });
@@ -337,7 +372,7 @@ final class Container
             $worker->registerHandler(new DecrementStockJob($this->orderSummaryStore(), $this->productRepository()));
             $worker->registerHandler(new GenerateInvoicePdfJob($this->orderSummaryStore(), new InvoicePdfRenderer(), $this->invoiceDirectory(), $this->logger()));
             $worker->registerHandler(new SendOrderConfirmationEmailJob($this->orderSummaryStore(), $this->logger()));
-            $worker->registerHandler(new DispatchWebhookJob($this->orderSummaryStore(), $this->tenantRepository(), $this->webhookClient()));
+            $worker->registerHandler(new DispatchWebhookJob($this->orderSummaryStore(), $this->tenantRepository(), $this->webhookClient(), $this->webhookDeliveryRepository()));
 
             return $worker;
         });

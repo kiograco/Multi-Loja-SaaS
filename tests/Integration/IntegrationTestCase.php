@@ -39,7 +39,8 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->database->pdo()->exec(
             'TRUNCATE event_store, order_summary_projection, daily_sales_projection,
-                      top_products_projection, products, tenants, users, processed_jobs
+                      top_products_projection, products, tenants, users, processed_jobs,
+                      webhook_delivery_attempts
              RESTART IDENTITY CASCADE'
         );
     }

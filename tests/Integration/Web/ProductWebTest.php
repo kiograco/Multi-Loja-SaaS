@@ -63,4 +63,29 @@ final class ProductWebTest extends WebTestCase
         self::assertSame(422, $response->status);
         self::assertStringContainsString('blank', strtolower($response->body));
     }
+
+    public function testProductsCanBeSearchedByName(): void
+    {
+        $this->loginAsNewOwner();
+        $this->request('POST', '/app/products/new', ['name' => 'Mechanical Keyboard', 'price' => '450.00', 'stockQuantity' => '10']);
+        $this->request('POST', '/app/products/new', ['name' => 'Wireless Mouse', 'price' => '90.00', 'stockQuantity' => '20']);
+
+        $response = $this->request('GET', '/app/products', [], ['search' => 'keyboard']);
+
+        self::assertStringContainsString('Mechanical Keyboard', $response->body);
+        self::assertStringNotContainsString('Wireless Mouse', $response->body);
+    }
+
+    public function testProductsListShowsPaginationOnlyWhenMoreThanOnePageExists(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        for ($i = 1; $i <= 25; ++$i) {
+            $this->request('POST', '/app/products/new', ['name' => "Product {$i}", 'price' => '10.00', 'stockQuantity' => '1']);
+        }
+
+        $response = $this->request('GET', '/app/products');
+
+        self::assertStringContainsString('class="pagination"', $response->body);
+        self::assertStringContainsString('Página 1 de 2', $response->body);
+    }
 }

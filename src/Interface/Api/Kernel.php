@@ -11,6 +11,7 @@ use OrderHub\Interface\Api\Controller\DashboardController;
 use OrderHub\Interface\Api\Controller\OrderController;
 use OrderHub\Interface\Api\Controller\ProductController;
 use OrderHub\Interface\Api\Controller\TenantController;
+use OrderHub\Interface\Api\Controller\WebhookController;
 use OrderHub\Interface\Api\Http\Request;
 use OrderHub\Interface\Api\Http\Response;
 use OrderHub\Interface\Api\Http\Router;
@@ -100,16 +101,19 @@ final class Kernel
         $router = new Router();
 
         $auth = new AuthController($this->container->loginService());
-        $tenants = new TenantController($this->container->commandBus());
+        $tenants = new TenantController($this->container->commandBus(), $this->container->queryBus());
         $products = new ProductController($this->container->commandBus(), $this->container->queryBus());
         $orders = new OrderController($this->container->commandBus(), $this->container->queryBus());
         $dashboard = new DashboardController($this->container->queryBus());
+        $webhooks = new WebhookController($this->container->commandBus(), $this->container->queryBus());
 
         // Public
         $router->add('POST', self::PREFIX . '/auth/login', $auth->login(...), protected: false);
 
         // Authenticated (tenant may be absent for tenant creation)
         $router->add('POST', self::PREFIX . '/tenants', $tenants->create(...));
+        $router->add('GET', self::PREFIX . '/tenants/me', $tenants->show(...));
+        $router->add('PATCH', self::PREFIX . '/tenants/me', $tenants->update(...));
 
         // Tenant-scoped (rate-limited)
         $router->add('GET', self::PREFIX . '/products', $products->list(...));
@@ -119,11 +123,17 @@ final class Kernel
         $router->add('POST', self::PREFIX . '/orders', $orders->create(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/pay', $orders->pay(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/ship', $orders->ship(...));
+        $router->add('POST', self::PREFIX . '/orders/{id}/deliver', $orders->deliver(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/cancel', $orders->cancel(...));
         $router->add('GET', self::PREFIX . '/orders/{id}', $orders->show(...));
+        $router->add('GET', self::PREFIX . '/orders/{id}/invoice', $orders->invoice(...));
+        $router->add('GET', self::PREFIX . '/orders/{id}/timeline', $orders->timeline(...));
         $router->add('GET', self::PREFIX . '/orders', $orders->list(...));
 
         $router->add('GET', self::PREFIX . '/dashboard/summary', $dashboard->summary(...));
+
+        $router->add('GET', self::PREFIX . '/webhooks/deliveries', $webhooks->deliveries(...));
+        $router->add('POST', self::PREFIX . '/webhooks/test', $webhooks->test(...));
 
         return $router;
     }

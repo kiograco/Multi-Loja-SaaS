@@ -70,6 +70,38 @@ final class PostgresProductRepository implements ProductRepository
         return $products;
     }
 
+    public function searchForTenant(string $tenantId, ?string $search, int $perPage, int $offset): array
+    {
+        $where = 'tenant_id = :tenant_id';
+        $params = ['tenant_id' => $tenantId];
+        if ($search !== null && $search !== '') {
+            $where .= ' AND name ILIKE :search';
+            $params['search'] = '%' . $search . '%';
+        }
+
+        $countStmt = $this->database->pdo()->prepare("SELECT COUNT(*) FROM products WHERE {$where}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        $stmt = $this->database->pdo()->prepare(
+            "SELECT * FROM products WHERE {$where} ORDER BY name ASC LIMIT :limit OFFSET :offset"
+        );
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue('limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        $items = [];
+        /** @var array{id: string, tenant_id: string, name: string, price_cents: int, currency: string, stock_quantity: int} $row */
+        foreach ($stmt as $row) {
+            $items[] = $this->hydrate($row);
+        }
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     /**
      * @param array{id: string, tenant_id: string, name: string, price_cents: int, currency: string, stock_quantity: int} $row
      */

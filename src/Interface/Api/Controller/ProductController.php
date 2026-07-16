@@ -8,7 +8,7 @@ use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CreateProduct\CreateProductCommand;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductCommand;
-use OrderHub\Application\Query\ListProducts\ListProductsQuery;
+use OrderHub\Application\Query\SearchProducts\SearchProductsQuery;
 use OrderHub\Interface\Api\Http\Input;
 use OrderHub\Interface\Api\Http\Request;
 use OrderHub\Interface\Api\Http\Response;
@@ -27,7 +27,14 @@ final class ProductController
     {
         $tenantId = $this->currentUser($request)->tenantId();
 
-        return Response::json(['data' => $this->queryBus->ask(new ListProductsQuery($tenantId))]);
+        $result = $this->queryBus->ask(new SearchProductsQuery(
+            $tenantId,
+            $request->query('search'),
+            (int) ($request->query('page') ?? '1'),
+            (int) ($request->query('perPage') ?? '20'),
+        ));
+
+        return Response::json($result);
     }
 
     public function create(Request $request): Response

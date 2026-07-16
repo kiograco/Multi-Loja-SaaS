@@ -8,24 +8,26 @@
     {% include 'orders/_status_panel.html.twig' %}
 
     <h2>Itens</h2>
-    <table>
-        <thead>
-        <tr>
-            <th scope="col">Produto</th>
-            <th scope="col">Quantidade</th>
-            <th scope="col">Preço unitário</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for item in order.items %}
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
             <tr>
-                <td>{{ item.productName }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.currency }} {{ (item.unitPriceCents / 100)|number_format(2, ',', '.') }}</td>
+                <th scope="col">Produto</th>
+                <th scope="col">Quantidade</th>
+                <th scope="col">Preço unitário</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for item in order.items %}
+                <tr>
+                    <td data-label="Produto">{{ item.productName }}</td>
+                    <td data-label="Quantidade">{{ item.quantity }}</td>
+                    <td data-label="Preço unitário">{{ item.currency }} {{ (item.unitPriceCents / 100)|number_format(2, ',', '.') }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <h2>Timeline de eventos</h2>
     <p>Histórico imutável, lido diretamente do event store — a mesma sequência que reconstrói o estado do pedido.</p>

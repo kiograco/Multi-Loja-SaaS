@@ -16,12 +16,15 @@ final class StubWebhookClient implements WebhookClient
     /** @var list<array{url: string, payload: array<string, mixed>}> */
     public array $calls = [];
     public bool $shouldFail = false;
+    public int $statusCode = 200;
 
-    public function post(string $url, array $payload): void
+    public function post(string $url, array $payload): int
     {
         $this->calls[] = ['url' => $url, 'payload' => $payload];
         if ($this->shouldFail) {
-            throw WebhookDeliveryException::forUrl($url, 'stubbed failure');
+            throw WebhookDeliveryException::forUrl($url, 'stubbed failure', 500);
         }
+
+        return $this->statusCode;
     }
 }

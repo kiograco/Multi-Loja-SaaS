@@ -9,6 +9,7 @@ use OrderHub\Interface\Web\Controller\AuthController;
 use OrderHub\Interface\Web\Controller\DashboardController;
 use OrderHub\Interface\Web\Controller\OrderController;
 use OrderHub\Interface\Web\Controller\ProductController;
+use OrderHub\Interface\Web\Controller\SettingsController;
 use OrderHub\Interface\Web\Http\Router;
 use OrderHub\Interface\Web\Http\Session;
 use OrderHub\Interface\Web\Http\WebRequest;
@@ -80,15 +81,17 @@ final class Kernel
     {
         $router = new Router();
 
-        $auth = new AuthController($this->container->loginService(), $this->session, $this->container->twig());
+        $auth = new AuthController($this->container->loginService(), $this->container->queryBus(), $this->session, $this->container->twig());
         $dashboard = new DashboardController($this->container->queryBus(), $this->session, $this->container->twig());
         $products = new ProductController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
         $orders = new OrderController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
+        $settings = new SettingsController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
 
         // Public
         $router->add('GET', self::PREFIX . '/login', $auth->showLogin(...), protected: false);
         $router->add('POST', self::PREFIX . '/login', $auth->login(...), protected: false);
         $router->add('POST', self::PREFIX . '/logout', $auth->logout(...), protected: false);
+        $router->add('POST', self::PREFIX . '/switch-tenant/{tenantId}', $auth->switchTenant(...));
         $router->add('GET', self::PREFIX . '/ping', fn (WebRequest $r): WebResponse => WebResponse::html($this->container->twig()->render('ping.html.twig')), protected: false);
 
         // Authenticated
@@ -102,9 +105,15 @@ final class Kernel
 
         $router->add('GET', self::PREFIX . '/orders', $orders->list(...));
         $router->add('GET', self::PREFIX . '/orders/{id}', $orders->detail(...));
+        $router->add('GET', self::PREFIX . '/orders/{id}/invoice', $orders->invoice(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/pay', $orders->pay(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/ship', $orders->ship(...));
+        $router->add('POST', self::PREFIX . '/orders/{id}/deliver', $orders->deliver(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/cancel', $orders->cancel(...));
+
+        $router->add('GET', self::PREFIX . '/settings', $settings->edit(...));
+        $router->add('POST', self::PREFIX . '/settings', $settings->update(...));
+        $router->add('POST', self::PREFIX . '/settings/test-webhook', $settings->testWebhook(...));
 
         return $router;
     }

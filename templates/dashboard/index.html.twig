@@ -3,54 +3,69 @@
 {% block content %}
     <h1>Dashboard</h1>
 
-    <section class="metrics">
-        <div class="metric-card">
-            <span class="metric-label">Pedidos pagos</span>
-            <span class="metric-value">{{ summary.totals.paidOrders }}</span>
-        </div>
-        <div class="metric-card">
-            <span class="metric-label">Receita</span>
-            <span class="metric-value">R$ {{ summary.totals.revenue }}</span>
-        </div>
-        <div class="metric-card">
-            <span class="metric-label">Ticket médio</span>
-            <span class="metric-value">R$ {{ summary.totals.averageTicket }}</span>
-        </div>
+    <section class="stat-grid">
+        <article class="stat-card">
+            <p class="stat-card__label">Pedidos pagos</p>
+            <p class="stat-card__value">{{ summary.totals.paidOrders }}</p>
+        </article>
+        <article class="stat-card">
+            <p class="stat-card__label">Receita</p>
+            <p class="stat-card__value">R$ {{ summary.totals.revenue }}</p>
+        </article>
+        <article class="stat-card">
+            <p class="stat-card__label">Ticket médio</p>
+            <p class="stat-card__value">R$ {{ summary.totals.averageTicket }}</p>
+        </article>
     </section>
 
     <h2>Vendas por dia</h2>
-    <table>
-        <thead>
-        <tr><th scope="col">Data</th><th scope="col">Pedidos</th><th scope="col">Receita</th></tr>
-        </thead>
-        <tbody>
-        {% for day in summary.salesByDay %}
-            <tr>
-                <td>{{ day.date }}</td>
-                <td>{{ day.ordersCount }}</td>
-                <td>R$ {{ day.revenue }}</td>
-            </tr>
-        {% else %}
-            <tr><td colspan="3">Sem vendas registradas ainda.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+            <tr><th scope="col">Data</th><th scope="col">Pedidos</th><th scope="col">Receita</th></tr>
+            </thead>
+            <tbody>
+            {% for day in summary.salesByDay %}
+                <tr>
+                    <td data-label="Data">{{ day.date }}</td>
+                    <td data-label="Pedidos">{{ day.ordersCount }}</td>
+                    <td data-label="Receita">R$ {{ day.revenue }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3">Sem vendas registradas ainda.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <h2>Produtos mais vendidos</h2>
-    <table>
-        <thead>
-        <tr><th scope="col">Produto</th><th scope="col">Unidades</th><th scope="col">Receita</th></tr>
-        </thead>
-        <tbody>
-        {% for product in summary.topProducts %}
-            <tr>
-                <td>{{ product.productName }}</td>
-                <td>{{ product.unitsSold }}</td>
-                <td>R$ {{ product.revenue }}</td>
-            </tr>
-        {% else %}
-            <tr><td colspan="3">Sem dados ainda.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="page-header">
+        <h2>Produtos mais vendidos</h2>
+        <form method="get" action="/app/dashboard" class="filter-form">
+            <label for="topProductsLimit">Mostrar</label>
+            <select id="topProductsLimit" name="topProductsLimit" onchange="this.form.submit()">
+                {% for value in [5, 10, 20] %}
+                    <option value="{{ value }}" {{ topProductsLimit == value ? 'selected' : '' }}>Top {{ value }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit">Aplicar</button></noscript>
+        </form>
+    </div>
+    <div class="data-table-wrapper">
+        <table class="data-table">
+            <thead>
+            <tr><th scope="col">Produto</th><th scope="col">Unidades</th><th scope="col">Receita</th></tr>
+            </thead>
+            <tbody>
+            {% for product in summary.topProducts %}
+                <tr>
+                    <td data-label="Produto">{{ product.productName }}</td>
+                    <td data-label="Unidades">{{ product.unitsSold }}</td>
+                    <td data-label="Receita">R$ {{ product.revenue }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3">Sem dados ainda.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}

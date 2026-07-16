@@ -26,9 +26,13 @@ final class DashboardController
     public function index(WebRequest $request): WebResponse
     {
         $tenantId = $this->currentUser($request)->tenantId();
+        $topProductsLimit = (int) ($request->query('topProductsLimit') ?? '5');
 
-        $summary = $this->queryBus->ask(new GetDashboardSummaryQuery($tenantId));
+        $summary = $this->queryBus->ask(new GetDashboardSummaryQuery($tenantId, $topProductsLimit));
 
-        return $this->render($this->twig, $this->session, 'dashboard/index.html.twig', ['summary' => $summary]);
+        return $this->render($this->twig, $this->session, 'dashboard/index.html.twig', [
+            'summary' => $summary,
+            'topProductsLimit' => $topProductsLimit,
+        ]);
     }
 }
