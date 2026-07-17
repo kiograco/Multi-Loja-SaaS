@@ -59,6 +59,15 @@
   box-sizing: border-box;
 }
 
+/* Component rules below set `display` on elements like button/select directly
+   (e.g. `button, .button { display: inline-flex }`), which — same origin,
+   same specificity family — beats the UA stylesheet's `[hidden] { display:
+   none }`. Restated explicitly here so the native `hidden` attribute still
+   hides things like the order form's per-row "Remover" button. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
@@ -629,6 +638,21 @@ button:hover, .button:hover {
   color: var(--color-ink);
 }
 
+.button--small {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.data-table__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.data-table__actions form {
+  display: inline-flex;
+}
+
 /* -- forms -------------------------------------------------------------- */
 .form {
   display: flex;
@@ -669,6 +693,46 @@ button:hover, .button:hover {
   font-size: var(--font-size-xs);
   color: var(--color-ink-muted);
   margin: var(--space-1) 0 0;
+}
+
+.order-form {
+  max-width: 640px;
+}
+
+.order-items {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: none;
+}
+
+.order-items legend {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  padding: 0 0 var(--space-2);
+}
+
+.order-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.order-item-row select {
+  flex: 1;
+}
+
+.order-item-row input[type="number"] {
+  width: 90px;
+  flex: none;
+}
+
+.order-item-row [data-order-item-remove] {
+  flex: none;
+}
+
+#order-item-add {
+  margin-top: var(--space-1);
 }
 
 .filter-form {

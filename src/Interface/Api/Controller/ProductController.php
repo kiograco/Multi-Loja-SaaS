@@ -7,6 +7,7 @@ namespace OrderHub\Interface\Api\Controller;
 use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CreateProduct\CreateProductCommand;
+use OrderHub\Application\Command\DeleteProduct\DeleteProductCommand;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductCommand;
 use OrderHub\Application\Query\SearchProducts\SearchProductsQuery;
 use OrderHub\Interface\Api\Http\Input;
@@ -66,6 +67,15 @@ final class ProductController
             $input->optionalInt('stockQuantity'),
             $input->optionalString('currency') ?? 'BRL',
         ));
+
+        return Response::noContent();
+    }
+
+    public function delete(Request $request): Response
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+
+        $this->commandBus->dispatch(new DeleteProductCommand($tenantId, (string) $request->attribute('id')));
 
         return Response::noContent();
     }

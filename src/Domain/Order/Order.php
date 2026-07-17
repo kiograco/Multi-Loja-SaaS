@@ -66,6 +66,13 @@ final class Order extends AggregateRoot
         if ($items === []) {
             throw InvalidOrderException::emptyItems();
         }
+        $seenProductIds = [];
+        foreach ($items as $item) {
+            if (isset($seenProductIds[$item->productId])) {
+                throw InvalidOrderException::duplicateProduct($item->productId);
+            }
+            $seenProductIds[$item->productId] = true;
+        }
 
         $total = Money::zero();
         foreach ($items as $item) {

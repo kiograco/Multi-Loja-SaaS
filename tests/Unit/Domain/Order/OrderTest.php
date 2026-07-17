@@ -53,6 +53,24 @@ final class OrderTest extends TestCase
         );
     }
 
+    public function testOrderRejectsTheSameProductListedTwice(): void
+    {
+        $this->expectException(InvalidOrderException::class);
+
+        $productId = Uuid::uuid4()->toString();
+        Order::create(
+            OrderId::generate(),
+            Uuid::uuid4()->toString(),
+            'Grace Hopper',
+            'grace@example.com',
+            [
+                new OrderItem($productId, 'Widget', Money::ofCents(1000), 1),
+                new OrderItem($productId, 'Widget', Money::ofCents(1000), 2),
+            ],
+            new FrozenClock(),
+        );
+    }
+
     public function testOrderRejectsInvalidCustomerEmail(): void
     {
         $this->expectException(InvalidOrderException::class);

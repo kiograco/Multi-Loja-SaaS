@@ -13,6 +13,8 @@ interface ProductRepository
 {
     public function save(Product $product): void;
 
+    public function delete(string $tenantId, ProductId $id): void;
+
     public function findById(string $tenantId, ProductId $id): ?Product;
 
     /**

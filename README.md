@@ -133,11 +133,19 @@ http://localhost:8080/app/login
 ```
 
 com o e-mail/senha impressos pelo `seed:demo` (`demo@orderhub.test` /
-`password`). As telas disponíveis:
+`password`), ou crie sua própria conta em `/app/signup` (usuário + primeira
+loja em um passo, sem verificação de e-mail — ver "Desvios" abaixo). As telas
+disponíveis:
 
 - **`/app/dashboard`** — mesmas métricas do endpoint `GET /dashboard/summary`.
-- **`/app/products`** — listagem e formulário de criação/edição de produtos.
-- **`/app/orders`** — listagem filtrável por status.
+- **`/app/products`** — listagem (com busca e paginação), criação/edição e
+  **exclusão** de produtos (form tradicional + confirmação JS; pedidos
+  existentes preservam nome/preço via snapshot em `OrderItem`, não são
+  afetados pela exclusão).
+- **`/app/orders`** — listagem filtrável por status, com um formulário de
+  **criação manual de pedido** (`/app/orders/new`: cliente + múltiplos itens),
+  reaproveitando o mesmo `CreateOrderCommand` da API — útil para vendas
+  originadas fora do checkout do cliente final (telefone, balcão).
 - **`/app/orders/{id}`** — detalhe do pedido com painel de ações via HTMX
   (pagar → enviar → **entregar**, fechando o ciclo de vida completo; cancelar
   fica disponível tanto em `criado` quanto em `pago`, com confirmação
@@ -153,6 +161,12 @@ com o e-mail/senha impressos pelo `seed:demo` (`demo@orderhub.test` /
 - **Trocar de loja** — um dono com mais de uma loja vê um seletor no menu
   lateral (`POST /app/switch-tenant/{tenantId}`) que troca a loja ativa da
   sessão sem exigir novo login.
+- **`/app/ops`** ("Ferramentas") — versão Web de `order:replay`,
+  `queue:retry-dlq` e `projection:rebuild`, exposta a pedido explícito do
+  usuário (ver "Desvios" abaixo — normalmente ficam só no CLI). Reconstrução
+  de pedido é restrita à loja logada; reprocessar a DLQ e reconstruir
+  projeções agem sobre **toda a instância** (fila e projeções não são
+  particionadas por tenant), com aviso e confirmação JS reforçada na tela.
 
 **Sessão (Web) vs JWT (API).** São dois mecanismos de autenticação
 propositalmente diferentes. A API é stateless e fala com clientes programáticos,
@@ -339,6 +353,27 @@ e, esgotadas 3 tentativas, move para a dead-letter queue `orderhub:dlq`.
    login Web como "e-mail + senha" em prosa, mas os nomes de campo seguem a
    convenção já usada em todo o resto do código (`customerName`, `priceCents`,
    etc.) em vez de introduzir a única exceção em português.
+
+10. **Signup self-service (`/app/signup`).** A Seção 19 do SPEC marcava isso
+    como fora de escopo (onboarding/cobrança/verificação de e-mail é decisão de
+    produto separada). Implementado a pedido explícito do usuário, mas mantendo
+    o resto da ressalva original: sem verificação de e-mail, sem cobrança —
+    é literalmente `RegisterUserCommand` + `CreateTenantCommand` atrás de um
+    formulário público, nada além disso.
+
+11. **Ferramentas de ops na Web (`/app/ops`).** A Seção 19 também descrevia
+    isso como risco de segurança desnecessário — e continua sendo. Implementado
+    a pedido explícito do usuário mesmo assim. `queue:retry-dlq` e
+    `projection:rebuild` **não são tenant-scoped na infraestrutura** (a fila
+    Redis e as projeções não são particionadas por loja), então qualquer
+    usuário autenticado que acesse essa tela pode reprocessar jobs ou
+    reconstruir projeções de **outros tenants**, não só da própria loja. Isso é
+    mitigado com um aviso explícito e confirmação JS reforçada na tela, **não**
+    com controle de acesso — este projeto não modela um papel de "admin"
+    distinto de "dono de loja". Documentado aqui para deixar claro que esse é
+    um trade-off consciente de escopo de portfólio, não um descuido: um reuso
+    além de portfólio precisaria de um papel de admin de verdade antes disso
+    ir para produção.
 
 ---
 

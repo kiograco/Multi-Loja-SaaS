@@ -151,6 +151,53 @@ final class OrderFlowApiTest extends ApiTestCase
         self::assertSame(409, $resp->status);
     }
 
+    public function testOrderCreationIsRejectedWhenQuantityExceedsStock(): void
+    {
+        $this->container->commandBus()->dispatch(new RegisterUserCommand('stock-guard@shop.test', 'secret123'));
+        $token = (string) $this->decode($this->request('POST', self::PREFIX . '/auth/login', ['email' => 'stock-guard@shop.test', 'password' => 'secret123']))['token'];
+        $this->request('POST', self::PREFIX . '/tenants', ['store_name' => 'Stock Shop'], $token);
+        $token = (string) $this->decode($this->request('POST', self::PREFIX . '/auth/login', ['email' => 'stock-guard@shop.test', 'password' => 'secret123']))['token'];
+
+        $productId = (string) $this->decode($this->request('POST', self::PREFIX . '/products', [
+            'name' => 'Widget',
+            'priceCents' => 1000,
+            'stockQuantity' => 3,
+        ], $token))['id'];
+
+        $resp = $this->request('POST', self::PREFIX . '/orders', [
+            'customerName' => 'Ada Lovelace',
+            'customerEmail' => 'ada@example.com',
+            'items' => [['productId' => $productId, 'quantity' => 4]],
+        ], $token);
+
+        self::assertSame(409, $resp->status);
+    }
+
+    public function testOrderCreationIsRejectedWhenTheSameProductIsListedTwice(): void
+    {
+        $this->container->commandBus()->dispatch(new RegisterUserCommand('duplicate-guard@shop.test', 'secret123'));
+        $token = (string) $this->decode($this->request('POST', self::PREFIX . '/auth/login', ['email' => 'duplicate-guard@shop.test', 'password' => 'secret123']))['token'];
+        $this->request('POST', self::PREFIX . '/tenants', ['store_name' => 'Duplicate Shop'], $token);
+        $token = (string) $this->decode($this->request('POST', self::PREFIX . '/auth/login', ['email' => 'duplicate-guard@shop.test', 'password' => 'secret123']))['token'];
+
+        $productId = (string) $this->decode($this->request('POST', self::PREFIX . '/products', [
+            'name' => 'Widget',
+            'priceCents' => 1000,
+            'stockQuantity' => 10,
+        ], $token))['id'];
+
+        $resp = $this->request('POST', self::PREFIX . '/orders', [
+            'customerName' => 'Ada Lovelace',
+            'customerEmail' => 'ada@example.com',
+            'items' => [
+                ['productId' => $productId, 'quantity' => 1],
+                ['productId' => $productId, 'quantity' => 2],
+            ],
+        ], $token);
+
+        self::assertSame(422, $resp->status);
+    }
+
     public function testUnauthenticatedRequestIsRejected(): void
     {
         $resp = $this->request('GET', self::PREFIX . '/products');

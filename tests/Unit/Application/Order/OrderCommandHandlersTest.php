@@ -13,8 +13,10 @@ use OrderHub\Application\Command\ShipOrder\ShipOrderHandler;
 use OrderHub\Application\EventBus\EventBus;
 use OrderHub\Application\Exceptions\AuthorizationException;
 use OrderHub\Application\Order\OrderRepository;
+use OrderHub\Domain\Order\Exceptions\InvalidOrderException;
 use OrderHub\Domain\Order\OrderId;
 use OrderHub\Domain\Order\OrderStatus;
+use OrderHub\Domain\Product\Exceptions\InsufficientStockException;
 use OrderHub\Domain\Product\Product;
 use OrderHub\Domain\Product\ProductId;
 use OrderHub\Domain\Shared\Exceptions\AggregateNotFoundException;
@@ -75,6 +77,26 @@ final class OrderCommandHandlersTest extends TestCase
         $this->expectException(AggregateNotFoundException::class);
         (new CreateOrderHandler($this->orders, $this->products, $this->clock))(
             new CreateOrderCommand($this->tenantId, 'Dev', 'dev@example.com', [['productId' => Uuid::uuid4()->toString(), 'quantity' => 1]]),
+        );
+    }
+
+    public function testCreateOrderFailsWhenQuantityExceedsStock(): void
+    {
+        // Product "Book" was seeded with stock 10.
+        $this->expectException(InsufficientStockException::class);
+        (new CreateOrderHandler($this->orders, $this->products, $this->clock))(
+            new CreateOrderCommand($this->tenantId, 'Dev', 'dev@example.com', [['productId' => $this->productId, 'quantity' => 11]]),
+        );
+    }
+
+    public function testCreateOrderFailsWhenTheSameProductIsListedTwice(): void
+    {
+        $this->expectException(InvalidOrderException::class);
+        (new CreateOrderHandler($this->orders, $this->products, $this->clock))(
+            new CreateOrderCommand($this->tenantId, 'Dev', 'dev@example.com', [
+                ['productId' => $this->productId, 'quantity' => 1],
+                ['productId' => $this->productId, 'quantity' => 2],
+            ]),
         );
     }
 

@@ -35,7 +35,13 @@
                     <td data-label="Nome">{{ product.name }}</td>
                     <td data-label="Preço">{{ product.currency }} {{ product.price }}</td>
                     <td data-label="Estoque">{{ product.stockQuantity }}</td>
-                    <td data-label="Ações"><a href="/app/products/{{ product.id }}/edit">Editar<span class="sr-only"> {{ product.name }}</span></a></td>
+                    <td data-label="Ações" class="data-table__actions">
+                        <a href="/app/products/{{ product.id }}/edit">Editar<span class="sr-only"> {{ product.name }}</span></a>
+                        <form method="post" action="/app/products/{{ product.id }}/delete"
+                              onsubmit="return confirm('Excluir o produto “{{ product.name }}”? Essa ação não pode ser desfeita.');">
+                            <button type="submit" class="button--danger button--small">Excluir<span class="sr-only"> {{ product.name }}</span></button>
+                        </form>
+                    </td>
                 </tr>
             {% else %}
                 <tr><td colspan="4">Nenhum produto cadastrado.</td></tr>

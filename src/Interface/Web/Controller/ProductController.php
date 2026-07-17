@@ -7,6 +7,7 @@ namespace OrderHub\Interface\Web\Controller;
 use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CreateProduct\CreateProductCommand;
+use OrderHub\Application\Command\DeleteProduct\DeleteProductCommand;
 use OrderHub\Application\Command\UpdateProduct\UpdateProductCommand;
 use OrderHub\Application\Query\GetProduct\GetProductQuery;
 use OrderHub\Application\Query\SearchProducts\SearchProductsQuery;
@@ -119,6 +120,21 @@ final class ProductController
         }
 
         $this->session->flash('success', 'Produto atualizado com sucesso.');
+
+        return WebResponse::redirect('/app/products');
+    }
+
+    public function delete(WebRequest $request): WebResponse
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+        $id = (string) $request->attribute('id');
+
+        try {
+            $this->commandBus->dispatch(new DeleteProductCommand($tenantId, $id));
+            $this->session->flash('success', 'Produto excluído com sucesso.');
+        } catch (AggregateNotFoundException) {
+            $this->session->flash('error', 'Produto não encontrado.');
+        }
 
         return WebResponse::redirect('/app/products');
     }

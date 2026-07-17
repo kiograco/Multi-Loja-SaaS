@@ -1,7 +1,10 @@
 {% extends 'layout.html.twig' %}
 {% block title %}Pedidos — OrderHub{% endblock %}
 {% block content %}
-    <h1>Pedidos</h1>
+    <div class="page-header">
+        <h1>Pedidos</h1>
+        <a href="/app/orders/new" class="button">Novo pedido</a>
+    </div>
 
     <form method="get" action="/app/orders" class="filter-form">
         <label for="status">Status</label>

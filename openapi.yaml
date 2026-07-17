@@ -185,6 +185,17 @@ paths:
       responses:
         '204': { description: Atualizado }
         '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Products]
+      summary: Exclui um produto
+      description: >
+        Exclusão definitiva. Pedidos já criados preservam nome/preço via
+        snapshot em OrderItem (CreateOrderHandler), então não são afetados.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204': { description: Excluído }
+        '404': { $ref: '#/components/responses/Error' }
 
   /orders:
     get:

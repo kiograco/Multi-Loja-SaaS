@@ -7,6 +7,7 @@ namespace OrderHub\Interface\Web\Controller;
 use OrderHub\Application\Bus\CommandBus;
 use OrderHub\Application\Bus\QueryBus;
 use OrderHub\Application\Command\CancelOrder\CancelOrderCommand;
+use OrderHub\Application\Command\CreateOrder\CreateOrderCommand;
 use OrderHub\Application\Command\DeliverOrder\DeliverOrderCommand;
 use OrderHub\Application\Command\PayOrder\PayOrderCommand;
 use OrderHub\Application\Command\ShipOrder\ShipOrderCommand;
@@ -14,7 +15,9 @@ use OrderHub\Application\Query\GetOrderEventTimeline\GetOrderEventTimelineQuery;
 use OrderHub\Application\Query\GetOrderInvoice\GetOrderInvoiceQuery;
 use OrderHub\Application\Query\GetOrderSummary\GetOrderSummaryQuery;
 use OrderHub\Application\Query\ListOrders\ListOrdersQuery;
+use OrderHub\Application\Query\ListProducts\ListProductsQuery;
 use OrderHub\Application\ReadModel\OrderSummary;
+use OrderHub\Domain\Shared\Exceptions\DomainException;
 use OrderHub\Interface\Web\Http\Session;
 use OrderHub\Interface\Web\Http\WebRequest;
 use OrderHub\Interface\Web\Http\WebResponse;
@@ -58,6 +61,80 @@ final class OrderController
             'status' => $status,
             'perPage' => $perPage,
         ]);
+    }
+
+    public function newForm(WebRequest $request): WebResponse
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+
+        return $this->render($this->twig, $this->session, 'orders/form.html.twig', [
+            'products' => $this->queryBus->ask(new ListProductsQuery($tenantId)),
+            'errors' => [],
+            'customerName' => '',
+            'customerEmail' => '',
+        ]);
+    }
+
+    public function create(WebRequest $request): WebResponse
+    {
+        $tenantId = $this->currentUser($request)->tenantId();
+
+        $customerName = trim((string) $request->input('customerName', ''));
+        $customerEmail = trim((string) $request->input('customerEmail', ''));
+        $items = $this->parseItems($request);
+
+        $errors = [];
+        if ($customerName === '') {
+            $errors[] = 'Nome do cliente é obrigatório.';
+        }
+        if ($customerEmail === '') {
+            $errors[] = 'E-mail do cliente é obrigatório.';
+        }
+        if ($items === []) {
+            $errors[] = 'Selecione ao menos um produto e uma quantidade válida.';
+        }
+
+        if ($errors === []) {
+            try {
+                $orderId = $this->commandBus->dispatch(new CreateOrderCommand($tenantId, $customerName, $customerEmail, $items));
+
+                $this->session->flash('success', 'Pedido criado com sucesso.');
+
+                return WebResponse::redirect('/app/orders/' . $orderId);
+            } catch (DomainException $e) {
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        return $this->render($this->twig, $this->session, 'orders/form.html.twig', [
+            'products' => $this->queryBus->ask(new ListProductsQuery($tenantId)),
+            'errors' => $errors,
+            'customerName' => $customerName,
+            'customerEmail' => $customerEmail,
+        ], 422);
+    }
+
+    /**
+     * @return list<array{productId: string, quantity: int}>
+     */
+    private function parseItems(WebRequest $request): array
+    {
+        /** @var list<mixed> $productIds */
+        $productIds = (array) $request->input('productId', []);
+        /** @var list<mixed> $quantities */
+        $quantities = (array) $request->input('quantity', []);
+
+        $items = [];
+        foreach ($productIds as $index => $productId) {
+            $productId = trim((string) $productId);
+            $quantity = (int) ($quantities[$index] ?? 0);
+            if ($productId === '' || $quantity < 1) {
+                continue;
+            }
+            $items[] = ['productId' => $productId, 'quantity' => $quantity];
+        }
+
+        return $items;
     }
 
     public function detail(WebRequest $request): WebResponse

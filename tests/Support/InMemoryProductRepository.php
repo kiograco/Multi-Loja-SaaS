@@ -18,6 +18,11 @@ final class InMemoryProductRepository implements ProductRepository
         $this->products[$product->tenantId . ':' . $product->id->value] = $product;
     }
 
+    public function delete(string $tenantId, ProductId $id): void
+    {
+        unset($this->products[$tenantId . ':' . $id->value]);
+    }
+
     public function findById(string $tenantId, ProductId $id): ?Product
     {
         return $this->products[$tenantId . ':' . $id->value] ?? null;
@@ -43,6 +48,6 @@ final class InMemoryProductRepository implements ProductRepository
         ));
         usort($matches, static fn (Product $a, Product $b): int => strcmp($a->name(), $b->name()));
 
-        return ['items' => array_slice($matches, $offset, $perPage), 'total' => count($matches)];
+        return ['items' => \array_slice($matches, $offset, $perPage), 'total' => \count($matches)];
     }
 }

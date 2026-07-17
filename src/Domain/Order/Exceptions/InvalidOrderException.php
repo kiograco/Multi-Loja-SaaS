@@ -13,6 +13,14 @@ final class InvalidOrderException extends DomainException
         return new self('An order must contain at least one item.');
     }
 
+    public static function duplicateProduct(string $productId): self
+    {
+        return new self(\sprintf(
+            'Product %s appears more than once in the item list; combine it into a single line instead.',
+            $productId,
+        ));
+    }
+
     public static function nonPositiveQuantity(string $productId, int $quantity): self
     {
         return new self(\sprintf('Item quantity for product %s must be >= 1, got %d.', $productId, $quantity));

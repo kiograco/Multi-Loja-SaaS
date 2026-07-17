@@ -1,0 +1,62 @@
+{% extends 'layout.html.twig' %}
+{% block title %}Novo pedido — OrderHub{% endblock %}
+{% block content %}
+    <h1>Novo pedido</h1>
+
+    {% if errors|length > 0 %}
+        <div class="flash flash-error" role="alert">
+            <ul>
+                {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if products|length == 0 %}
+        <p>Nenhum produto cadastrado ainda. <a href="/app/products/new">Cadastre um produto</a> antes de criar um pedido.</p>
+    {% else %}
+        <form method="post" action="/app/orders/new" class="form order-form">
+            <label for="customerName">Nome do cliente</label>
+            <input type="text" id="customerName" name="customerName" value="{{ customerName }}" required>
+
+            <label for="customerEmail">E-mail do cliente</label>
+            <input type="email" id="customerEmail" name="customerEmail" value="{{ customerEmail }}" required>
+
+            <fieldset class="order-items">
+                <legend>Itens do pedido</legend>
+                <div id="order-items-list">
+                    <div class="order-item-row" data-order-item-row>
+                        <label class="sr-only" for="productId-0">Produto</label>
+                        <select id="productId-0" name="productId[]" data-order-item-select>
+                            <option value="">— selecione um produto —</option>
+                            {% for product in products %}
+                                <option value="{{ product.id }}" data-stock="{{ product.stockQuantity }}">{{ product.name }} ({{ product.currency }} {{ product.price }}) — estoque: {{ product.stockQuantity }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="sr-only" for="quantity-0">Quantidade</label>
+                        <input type="number" id="quantity-0" name="quantity[]" min="1" value="1" data-order-item-quantity>
+                        <button type="button" class="button--secondary button--small" data-order-item-remove hidden>Remover<span class="sr-only"> item</span></button>
+                    </div>
+                </div>
+
+                <button type="button" id="order-item-add" class="button--secondary">+ Adicionar item</button>
+
+                <template id="order-item-row-template">
+                    <div class="order-item-row" data-order-item-row>
+                        <label class="sr-only">Produto</label>
+                        <select name="productId[]" data-order-item-select>
+                            <option value="">— selecione um produto —</option>
+                            {% for product in products %}
+                                <option value="{{ product.id }}" data-stock="{{ product.stockQuantity }}">{{ product.name }} ({{ product.currency }} {{ product.price }}) — estoque: {{ product.stockQuantity }}</option>
+                            {% endfor %}
+                        </select>
+                        <label class="sr-only">Quantidade</label>
+                        <input type="number" name="quantity[]" min="1" value="1" data-order-item-quantity>
+                        <button type="button" class="button--secondary button--small" data-order-item-remove>Remover<span class="sr-only"> item</span></button>
+                    </div>
+                </template>
+            </fieldset>
+
+            <button type="submit">Criar pedido</button>
+        </form>
+    {% endif %}
+{% endblock %}

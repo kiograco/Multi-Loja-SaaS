@@ -119,6 +119,7 @@ final class Kernel
         $router->add('GET', self::PREFIX . '/products', $products->list(...));
         $router->add('POST', self::PREFIX . '/products', $products->create(...));
         $router->add('PATCH', self::PREFIX . '/products/{id}', $products->update(...));
+        $router->add('DELETE', self::PREFIX . '/products/{id}', $products->delete(...));
 
         $router->add('POST', self::PREFIX . '/orders', $orders->create(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/pay', $orders->pay(...));

@@ -88,4 +88,52 @@ final class ProductWebTest extends WebTestCase
         self::assertStringContainsString('class="pagination"', $response->body);
         self::assertStringContainsString('Página 1 de 2', $response->body);
     }
+
+    public function testDeletingAProductRemovesItFromTheListing(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        $this->request('POST', '/app/products/new', ['name' => 'Disposable Widget', 'price' => '10.00', 'stockQuantity' => '1']);
+        $productId = $this->container->queryBus()->ask(new ListProductsQuery($tenantId))[0]['id'];
+
+        $response = $this->request('POST', "/app/products/{$productId}/delete");
+
+        self::assertSame(302, $response->status);
+        self::assertSame('/app/products', $response->headers['location']);
+        self::assertCount(0, $this->container->queryBus()->ask(new ListProductsQuery($tenantId)));
+
+        $list = $this->request('GET', '/app/products');
+        self::assertStringNotContainsString('Disposable Widget', $list->body);
+    }
+
+    public function testDeletingAlreadyDeletedProductFlashesErrorInsteadOfCrashing(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        $this->request('POST', '/app/products/new', ['name' => 'Widget', 'price' => '10.00', 'stockQuantity' => '1']);
+        $productId = $this->container->queryBus()->ask(new ListProductsQuery($tenantId))[0]['id'];
+        $this->request('POST', "/app/products/{$productId}/delete");
+
+        $response = $this->request('POST', "/app/products/{$productId}/delete");
+
+        self::assertSame(302, $response->status);
+    }
+
+    public function testAnOrderCreatedBeforeADeletedProductStillShowsItsSnapshottedName(): void
+    {
+        $tenantId = $this->loginAsNewOwner();
+        $this->request('POST', '/app/products/new', ['name' => 'Soon Gone', 'price' => '10.00', 'stockQuantity' => '5']);
+        $productId = $this->container->queryBus()->ask(new ListProductsQuery($tenantId))[0]['id'];
+
+        $orderId = $this->container->commandBus()->dispatch(new \OrderHub\Application\Command\CreateOrder\CreateOrderCommand(
+            $tenantId,
+            'Alan Turing',
+            'alan@example.com',
+            [['productId' => $productId, 'quantity' => 1]],
+        ));
+
+        $this->request('POST', "/app/products/{$productId}/delete");
+
+        $orderPage = $this->request('GET', "/app/orders/{$orderId}");
+        self::assertSame(200, $orderPage->status);
+        self::assertStringContainsString('Soon Gone', $orderPage->body);
+    }
 }

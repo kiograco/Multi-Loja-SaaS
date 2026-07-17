@@ -43,6 +43,14 @@ final class PostgresProductRepository implements ProductRepository
         ]);
     }
 
+    public function delete(string $tenantId, ProductId $id): void
+    {
+        $stmt = $this->database->pdo()->prepare(
+            'DELETE FROM products WHERE id = :id AND tenant_id = :tenant_id'
+        );
+        $stmt->execute(['id' => $id->value, 'tenant_id' => $tenantId]);
+    }
+
     public function findById(string $tenantId, ProductId $id): ?Product
     {
         $stmt = $this->database->pdo()->prepare(

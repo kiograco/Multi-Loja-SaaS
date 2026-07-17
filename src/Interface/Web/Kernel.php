@@ -7,6 +7,7 @@ namespace OrderHub\Interface\Web;
 use OrderHub\Infrastructure\Bootstrap\Container;
 use OrderHub\Interface\Web\Controller\AuthController;
 use OrderHub\Interface\Web\Controller\DashboardController;
+use OrderHub\Interface\Web\Controller\OpsController;
 use OrderHub\Interface\Web\Controller\OrderController;
 use OrderHub\Interface\Web\Controller\ProductController;
 use OrderHub\Interface\Web\Controller\SettingsController;
@@ -81,15 +82,18 @@ final class Kernel
     {
         $router = new Router();
 
-        $auth = new AuthController($this->container->loginService(), $this->container->queryBus(), $this->session, $this->container->twig());
+        $auth = new AuthController($this->container->loginService(), $this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
         $dashboard = new DashboardController($this->container->queryBus(), $this->session, $this->container->twig());
         $products = new ProductController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
         $orders = new OrderController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
         $settings = new SettingsController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
+        $ops = new OpsController($this->container->commandBus(), $this->container->queryBus(), $this->session, $this->container->twig());
 
         // Public
         $router->add('GET', self::PREFIX . '/login', $auth->showLogin(...), protected: false);
         $router->add('POST', self::PREFIX . '/login', $auth->login(...), protected: false);
+        $router->add('GET', self::PREFIX . '/signup', $auth->showSignup(...), protected: false);
+        $router->add('POST', self::PREFIX . '/signup', $auth->signup(...), protected: false);
         $router->add('POST', self::PREFIX . '/logout', $auth->logout(...), protected: false);
         $router->add('POST', self::PREFIX . '/switch-tenant/{tenantId}', $auth->switchTenant(...));
         $router->add('GET', self::PREFIX . '/ping', fn (WebRequest $r): WebResponse => WebResponse::html($this->container->twig()->render('ping.html.twig')), protected: false);
@@ -102,8 +106,11 @@ final class Kernel
         $router->add('POST', self::PREFIX . '/products/new', $products->create(...));
         $router->add('GET', self::PREFIX . '/products/{id}/edit', $products->editForm(...));
         $router->add('POST', self::PREFIX . '/products/{id}/edit', $products->update(...));
+        $router->add('POST', self::PREFIX . '/products/{id}/delete', $products->delete(...));
 
         $router->add('GET', self::PREFIX . '/orders', $orders->list(...));
+        $router->add('GET', self::PREFIX . '/orders/new', $orders->newForm(...));
+        $router->add('POST', self::PREFIX . '/orders/new', $orders->create(...));
         $router->add('GET', self::PREFIX . '/orders/{id}', $orders->detail(...));
         $router->add('GET', self::PREFIX . '/orders/{id}/invoice', $orders->invoice(...));
         $router->add('POST', self::PREFIX . '/orders/{id}/pay', $orders->pay(...));
@@ -114,6 +121,11 @@ final class Kernel
         $router->add('GET', self::PREFIX . '/settings', $settings->edit(...));
         $router->add('POST', self::PREFIX . '/settings', $settings->update(...));
         $router->add('POST', self::PREFIX . '/settings/test-webhook', $settings->testWebhook(...));
+
+        $router->add('GET', self::PREFIX . '/ops', $ops->index(...));
+        $router->add('POST', self::PREFIX . '/ops/replay', $ops->replay(...));
+        $router->add('POST', self::PREFIX . '/ops/retry-dlq', $ops->retryDeadLetterQueue(...));
+        $router->add('POST', self::PREFIX . '/ops/rebuild-projection', $ops->rebuildProjection(...));
 
         return $router;
     }

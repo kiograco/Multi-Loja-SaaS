@@ -1,0 +1,113 @@
+{% extends 'layout.html.twig' %}
+{% block title %}Ferramentas — OrderHub{% endblock %}
+{% block content %}
+    <h1>Ferramentas de sistema</h1>
+
+    <div class="flash flash-error" role="alert">
+        <strong>Atenção:</strong> estas ferramentas operam sobre toda a instância do OrderHub — a fila e as
+        projeções não são separadas por loja. "Reprocessar DLQ" e "Reconstruir projeção" afetam
+        <strong>todos os tenants</strong>, não só o seu. Normalmente ficam restritas ao CLI (<code>bin/console</code>)
+        justamente por isso.
+    </div>
+
+    <h2>Reconstruir pedido a partir do event store</h2>
+    <p>Reconstrói um pedido lendo só o event store, sem tocar em nenhuma projeção — prova que o read model é
+        totalmente derivado. Restrito à sua loja: um ID de outro tenant retorna "não encontrado".</p>
+
+    {% if replayError %}
+        <div class="flash flash-error" role="alert">{{ replayError }}</div>
+    {% endif %}
+
+    <form method="post" action="/app/ops/replay" class="filter-form">
+        <label for="orderId">ID do pedido</label>
+        <input type="text" id="orderId" name="orderId" value="{{ replayOrderId }}" placeholder="UUID do pedido" required>
+        <button type="submit">Reconstruir</button>
+    </form>
+
+    {% if replayResult %}
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">Status</th>
+                    <th scope="col">Versão</th>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td data-label="Status"><span class="badge badge-{{ replayResult.status }}">{{ replayResult.status }}</span></td>
+                    <td data-label="Versão">{{ replayResult.version }}</td>
+                    <td data-label="Cliente">{{ replayResult.customerName }} &lt;{{ replayResult.customerEmail }}&gt;</td>
+                    <td data-label="Total">{{ replayResult.currency }} {{ replayResult.total }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">Produto</th>
+                    <th scope="col">Quantidade</th>
+                    <th scope="col">Preço unitário</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in replayResult.items %}
+                    <tr>
+                        <td data-label="Produto">{{ item.productName }}</td>
+                        <td data-label="Quantidade">{{ item.quantity }}</td>
+                        <td data-label="Preço unitário">{{ item.currency }} {{ item.unitPrice }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% set event_kinds = {
+            'OrderCreated': 'created',
+            'PaymentReceived': 'payment',
+            'OrderShipped': 'shipped',
+            'OrderDelivered': 'delivered',
+            'OrderCancelled': 'cancelled',
+        } %}
+        <ol class="event-timeline">
+            {% for event in replayResult.events %}
+                <li class="event-entry" data-kind="{{ event_kinds[event.type]|default('created') }}" style="animation-delay: {{ loop.index0 * 60 }}ms">
+                    <span class="event-stamp"></span>
+                    <div class="event-body">
+                        <span class="event-type">{{ event.type }}</span>
+                        <span class="event-time">{{ event.occurredAt|date('Y-m-d H:i:s') }}</span>
+                    </div>
+                </li>
+            {% endfor %}
+        </ol>
+    {% endif %}
+
+    <h2>Dead-letter queue</h2>
+    <p>Reprocessa todos os jobs que esgotaram as tentativas de retry e caíram na dead-letter queue —
+        de qualquer tenant, a fila é global à instância.</p>
+    <form method="post" action="/app/ops/retry-dlq"
+          onsubmit="return confirm('Reprocessar TODOS os jobs da dead-letter queue, de TODOS os tenants desta instância. Confirma?');">
+        <button type="submit" class="button--danger">Reprocessar DLQ</button>
+    </form>
+
+    <h2>Reconstruir projeção</h2>
+    <p>Apaga e reconstrói uma projeção (read model) a partir de todo o histórico de eventos — prova que
+        projeções são descartáveis e totalmente derivadas. Afeta os dados de <strong>todos os tenants</strong>
+        enquanto a reconstrução roda.</p>
+    <form method="post" action="/app/ops/rebuild-projection" class="filter-form"
+          onsubmit="return confirm('Isso apaga e reconstrói a projeção selecionada para TODOS os tenants desta instância. Confirma?');">
+        <label for="name">Projeção</label>
+        <select id="name" name="name">
+            {% for projectionName in projectionNames %}
+                <option value="{{ projectionName }}">{{ projectionName }}</option>
+            {% endfor %}
+            <option value="all">all (todas)</option>
+        </select>
+        <button type="submit" class="button--danger">Reconstruir</button>
+    </form>
+{% endblock %}
