@@ -396,20 +396,3 @@ tests/
   Support/         # test doubles (clocks, in-memory stores, stubs)
 docker/            # Dockerfile + docker-compose
 ```
-
----
-
-## Definição de Pronto
-
-- [x] Fases 0–9 do SPEC implementadas com seus critérios de aceite.
-- [x] `docker-compose up` sobe API, worker, banco e fila sem passos manuais.
-- [x] `phpstan` nível 8 sem erros; `php-cs-fixer` (PSR-12) limpo.
-- [x] Suíte de testes verde (unit + integração, incluindo isolamento de tenant,
-      fluxo HTTP completo, retry→DLQ e performance do dashboard com 1000 pedidos).
-- [x] `openapi.yaml` reflete todas as rotas implementadas.
-- [x] Fases 10–15 (frontend Web) implementadas: Twig + layout base, login/logout
-      via sessão protegendo `/app/*`, dashboard/produtos/pedidos Web reaproveitando
-      os mesmos Command/Query Handlers da API, ações de pedido via HTMX com
-      fallback sem JS, e timeline de eventos do pedido.
-- [x] Nenhum `Web\Controller` acessa `Domain`/`Infrastructure` diretamente — só
-      `Application` (Command/QueryBus), como o `Api\Controller`.
